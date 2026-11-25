@@ -1,0 +1,6 @@
+{
+  "private": true,
+  "scripts": {
+    "start": "cargo run --manifest-path server/Cargo.toml"
+  }
+}

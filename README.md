@@ -11,14 +11,24 @@ A browser-based issue tracker with a private Engineering demo for each visitor. 
 
 ## Run locally
 
-Use a current stable Rust toolchain, Bun 1.4.4, and a running PostgreSQL server. From the repository root, create a database your local PostgreSQL role can access and start the app.
+Use a current stable Rust toolchain, Bun 1.4.4, and a running PostgreSQL server. From the repository root, create a database your local PostgreSQL role can access and build the frontend.
 
 ```sh
 createdb sync_line
-export DATABASE_URL=postgresql:///sync_line
 bun install --cwd web --frozen-lockfile
 bun run --bun --cwd web build
-cargo run --manifest-path server/Cargo.toml
+```
+
+Add your connection string to a file named `.env` in the repository root. Git ignores this file.
+
+```dotenv
+DATABASE_URL=postgresql:///sync_line
+```
+
+Start the app from the repository root. Bun loads `.env` automatically.
+
+```sh
+bun start
 ```
 
 Open [Sync Line](http://127.0.0.1:3000) and choose **Try the demo**. The API applies migrations on startup. Set `DATABASE_URL` to your connection string if your database requires a different role, host, or password.
