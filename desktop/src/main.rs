@@ -133,8 +133,8 @@ async fn workspace(State(pool): State<PgPool>, headers: HeaderMap) -> Result<Res
             .execute(&mut *tx)
             .await
             .map_err(db_error)?;
-        let seeds: Vec<Fields> =
-            serde_json::from_str(include_str!("../shared/issues.json")).expect("valid demo seed");
+        let seeds: Vec<Fields> = serde_json::from_str(include_str!("../../web/shared/issues.json"))
+            .expect("valid demo seed");
         for seed in seeds {
             insert(&mut tx, id, Uuid::new_v4(), seed).await?;
         }
@@ -195,14 +195,16 @@ async fn update(
 async fn main() -> Result<(), Box<dyn std::error::Error>> {
     let pool = PgPool::connect(&std::env::var("DATABASE_URL")?).await?;
     sqlx::migrate!().run(&pool).await?;
+    let dist = std::path::Path::new(env!("CARGO_MANIFEST_DIR")).join("../web/dist");
+    let index = ServeFile::new(dist.join("index.html"));
     let app = Router::new()
         .route("/api/workspace", post(workspace))
         .route("/api/issues", post(create))
         .route("/api/issues/{number}", put(update))
-        .route_service("/", ServeFile::new("dist/index.html"))
-        .route_service("/app", ServeFile::new("dist/index.html"))
-        .route_service("/app/issues/{issue}", ServeFile::new("dist/index.html"))
-        .nest_service("/assets", ServeDir::new("dist/assets"))
+        .route_service("/", index.clone())
+        .route_service("/app", index.clone())
+        .route_service("/app/issues/{issue}", index)
+        .nest_service("/assets", ServeDir::new(dist.join("assets")))
         .fallback(get(|| async { StatusCode::NOT_FOUND }))
         .with_state(pool);
     let address = std::env::var("BIND_ADDR").unwrap_or_else(|_| "127.0.0.1:3000".into());

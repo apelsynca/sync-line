@@ -1,4 +1,4 @@
-/target/
-/dist/
+/desktop/target/
+/web/dist/
 node_modules/
 .env

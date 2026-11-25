@@ -10,7 +10,7 @@ This plan assumes “website first” includes both the public homepage and the 
 |---|---|---|
 | Website and browser app | React + TypeScript, with `/` for the homepage and `/app` for the workspace | Both surfaces can import the same components, and every issue can have a shareable URL. |
 | Application backend | Rust with Axum, SQLx, and PostgreSQL | One service owns issue numbering, workflow transitions, permissions, and persistence for every client. |
-| Unified UI kit | A shared `packages/ui` package with design tokens and accessible React components | The homepage and app share typography, colors, focus states, buttons, dialogs, and menus. The app adds reusable issue rows, status pickers, and filter controls as features need them. |
+| Unified UI kit | A shared `web/packages/ui` package with design tokens and accessible React components | The homepage and app share typography, colors, focus states, buttons, dialogs, and menus. The app adds reusable issue rows, status pickers, and filter controls as features need them. |
 | Desktop app | Add a Tauri shell once the browser workflow is solid | Desktop can reuse the browser UI and Rust API. Native work can focus on deep links, notifications, and keyboard shortcuts. |
 
 ## First milestone · Website and issue workflow

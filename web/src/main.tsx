@@ -1,7 +1,7 @@
 import { useEffect, useState, type FormEvent } from "react";
 import { createRoot } from "react-dom/client";
 import { Avatar, Brand, ButtonLink, Status } from "@sync-line/ui";
-import seeds from "../../shared/issues.json";
+import seeds from "../shared/issues.json";
 import "./style.css";
 
 type Fields = (typeof seeds)[number];
