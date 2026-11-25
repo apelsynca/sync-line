@@ -10,19 +10,19 @@ A browser-based issue tracker with a private Engineering demo for each visitor. 
 
 ## Run locally
 
-Use a current stable Rust toolchain, Node.js 22.12 or newer, npm, and a running PostgreSQL server. From the repository root, create a database your local PostgreSQL role can access and start the app.
+Use a current stable Rust toolchain, Bun 1.4.4, and a running PostgreSQL server. From the repository root, create a database your local PostgreSQL role can access and start the app.
 
 ```sh
 createdb sync_line
 export DATABASE_URL=postgresql:///sync_line
-npm --prefix web ci
-npm --prefix web run build
+bun install --cwd web --frozen-lockfile
+bun run --bun --cwd web build
 cargo run --manifest-path desktop/Cargo.toml
 ```
 
 Open [Sync Line](http://127.0.0.1:3000) and choose **Try the demo**. The API applies migrations on startup. Set `DATABASE_URL` to your connection string if your database requires a different role, host, or password.
 
-For frontend development, leave the API running on port 3000 and run `npm --prefix web run dev` in a second terminal. Vite serves the interface and proxies API requests. For the combined production build, `BIND_ADDR` overrides the default listener at `127.0.0.1:3000`.
+For frontend development, leave the API running on port 3000 and run `bun run --bun --cwd web dev` in a second terminal. Vite serves the interface and proxies API requests. For the combined production build, `BIND_ADDR` overrides the default listener at `127.0.0.1:3000`.
 
 ## Check the demo
 

@@ -1,6 +1,7 @@
 {
   "name": "@sync-line/web",
   "private": true,
+  "packageManager": "bun@1.4.4",
   "type": "module",
   "scripts": {
     "build": "tsc --noEmit && vite build",
