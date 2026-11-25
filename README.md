@@ -5,7 +5,8 @@ A browser-based issue tracker with a private Engineering demo for each visitor. 
 ## Project layout
 
 - `web/` contains the React app, UI package, demo data, and frontend tooling.
-- `desktop/` contains the Rust service and PostgreSQL migrations. The Tauri shell is planned.
+- `server/` contains the Axum API and PostgreSQL migrations.
+- `desktop/` is reserved for the planned Tauri client.
 - [Product plan](docs/PLAN.md) describes the demo and roadmap.
 
 ## Run locally
@@ -17,7 +18,7 @@ createdb sync_line
 export DATABASE_URL=postgresql:///sync_line
 bun install --cwd web --frozen-lockfile
 bun run --bun --cwd web build
-cargo run --manifest-path desktop/Cargo.toml
+cargo run --manifest-path server/Cargo.toml
 ```
 
 Open [Sync Line](http://127.0.0.1:3000) and choose **Try the demo**. The API applies migrations on startup. Set `DATABASE_URL` to your connection string if your database requires a different role, host, or password.
@@ -28,4 +29,4 @@ For frontend development, leave the API running on port 3000 and run `bun run --
 
 Create an issue, assign it, change its status to Done, and save. Reload its detail URL and return to **Team issues**. Open the same URL in another browser profile to check workspace isolation. Issue numbers start at ENG-1 independently in each workspace.
 
-Run `cargo test --manifest-path desktop/Cargo.toml` with `DATABASE_URL` set to exercise concurrent creation retries and workspace isolation against PostgreSQL. SQLx creates a temporary test database, so the test role needs permission to create databases.
+Run `cargo test --manifest-path server/Cargo.toml` with `DATABASE_URL` set to exercise concurrent creation retries and workspace isolation against PostgreSQL. SQLx creates a temporary test database, so the test role needs permission to create databases.

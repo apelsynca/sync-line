@@ -1,3 +1,3 @@
 # Desktop
 
-The Rust service in this crate serves the [web app](../web/) and stores issues in PostgreSQL. The planned Tauri shell will reuse that interface and API. See the [setup instructions](../README.md#run-locally).
+This directory is reserved for the planned Tauri client. It will reuse the [web interface](../web/) and connect to the [Axum API](../server/).
