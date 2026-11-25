@@ -1,6 +1,12 @@
-import { useEffect, useState, type FormEvent } from "react";
+import { useEffect, useRef, useState, type FormEvent } from "react";
 import { createRoot } from "react-dom/client";
-import { Avatar, Brand, ButtonLink, Status } from "@sync-line/ui";
+import {
+  Avatar,
+  Brand,
+  ButtonLink,
+  ComposerDialog,
+  Status,
+} from "@sync-line/ui";
 import seeds from "../shared/issues.json";
 import "./style.css";
 
@@ -30,50 +36,70 @@ function IssueList({
   issues: Issue[];
   preview?: boolean;
 }) {
+  const [activeOnly, setActiveOnly] = useState(false);
   return (
     <section
       className="list-card"
       aria-label={preview ? "Demo workspace preview" : "Team issues"}
     >
       <div className="list-head">
-        <div>
-          <Team />
-          <h2>
-            Team issues <small>{issues.length}</small>
-          </h2>
-        </div>
-        {!preview && <ButtonLink href="/app/issues/new">New issue</ButtonLink>}
+        <Team />
+        <span aria-hidden="true">›</span>
+        <h2>Issues</h2>
+        {!preview && (
+          <a className="new-link" href="/app/issues/new">
+            ＋ New issue
+          </a>
+        )}
       </div>
-      <div className="columns" aria-hidden="true">
-        <span>Issue</span>
-        <span>Status</span>
-        <span>Assignee</span>
+      <div className="list-filters" role="group" aria-label="Issue view">
+        <button aria-pressed={activeOnly} onClick={() => setActiveOnly(true)}>
+          Active
+        </button>
+        <button aria-pressed={!activeOnly} onClick={() => setActiveOnly(false)}>
+          All issues
+        </button>
       </div>
-      <ul>
-        {issues.map((issue) => {
-          const content = (
-            <>
-              <span className="summary">
-                <span className="identifier">ENG-{issue.number}</span>
-                <strong>{issue.title}</strong>
-              </span>
-              <Status value={issue.status} />
-              <Avatar name={issue.assignee} />
-            </>
-          );
+      {properties.status
+        .filter((status) => !activeOnly || status !== "Done")
+        .map((status) => {
+          const group = issues.filter((issue) => issue.status === status);
           return (
-            <li key={issue.number}>
-              {preview ? (
-                <div className="row">{content}</div>
-              ) : (
-                <a className="row" href={issuePath(issue.number)}>
-                  {content}
-                </a>
-              )}
-            </li>
+            <details className="issue-group" key={status} open>
+              <summary>
+                <Status value={status} />
+                <span>{group.length}</span>
+              </summary>
+              <ul>
+                {group.map((issue) => {
+                  const content = (
+                    <>
+                      <span className="identifier">ENG-{issue.number}</span>
+                      <i
+                        className="status-dot"
+                        data-status={status}
+                        aria-hidden="true"
+                      />
+                      <strong>{issue.title}</strong>
+                      <Avatar name={issue.assignee} />
+                    </>
+                  );
+                  return (
+                    <li key={issue.number}>
+                      {preview ? (
+                        <div className="row">{content}</div>
+                      ) : (
+                        <a className="row" href={issuePath(issue.number)}>
+                          {content}
+                        </a>
+                      )}
+                    </li>
+                  );
+                })}
+              </ul>
+            </details>
           );
         })}
-      </ul>
     </section>
   );
 }
@@ -128,7 +154,9 @@ const properties = {
 
 function Editor({ issue }: { issue?: Issue }) {
   const [draft, edit] = useState<Fields>(issue ?? empty);
-  const [requestId] = useState(() => crypto.randomUUID());
+  const titleInput = useRef<HTMLInputElement>(null);
+  const [createMore, setCreateMore] = useState(false);
+  const [requestId, setRequestId] = useState(() => crypto.randomUUID());
   const [saving, setSaving] = useState(false);
   const [feedback, setFeedback] = useState("");
   function change(key: keyof Fields, value: string) {
@@ -154,7 +182,15 @@ function Editor({ issue }: { issue?: Issue }) {
           ...draft,
           request_id: requestId,
         });
-        location.replace(issuePath(await response.json()));
+        const number = await response.json();
+        if (createMore) {
+          edit({ ...empty });
+          setRequestId(crypto.randomUUID());
+          setFeedback(`ENG-${number} created.`);
+          requestAnimationFrame(() => titleInput.current?.focus());
+        } else {
+          location.replace(issuePath(number));
+        }
       }
     } catch {
       setFeedback("Couldn’t save. Your edits are here. Try saving again.");
@@ -162,63 +198,85 @@ function Editor({ issue }: { issue?: Issue }) {
       setSaving(false);
     }
   }
-  return (
-    <>
-      <a href="/app" className="back">
-        Team issues
-      </a>
-      <form onSubmit={submit}>
-        <fieldset disabled={saving}>
-          <div className="editor-head">
-            <Team />
-            <h1>{issue ? "ENG-" + issue.number : "New issue"}</h1>
-          </div>
-          <label>
-            Title
-            <input
-              autoFocus={!issue}
-              required
-              maxLength={200}
-              value={draft.title}
-              onChange={(e) => change("title", e.target.value)}
-            />
-          </label>
-          <label>
-            Description
-            <textarea
-              rows={5}
-              value={draft.description}
-              onChange={(e) => change("description", e.target.value)}
-            />
-          </label>
-          <div className="properties">
-            {(Object.keys(properties) as (keyof typeof properties)[]).map(
-              (key) => (
-                <label key={key}>
-                  {key[0].toUpperCase() + key.slice(1)}
-                  <select
-                    value={draft[key]}
-                    onChange={(e) => change(key, e.target.value)}
-                  >
-                    {properties[key].map((value) => (
-                      <option key={value} value={value}>
-                        {value || "Unassigned"}
-                      </option>
-                    ))}
-                  </select>
-                </label>
-              ),
-            )}
-          </div>
-          <div className="actions">
-            <button>
-              {saving ? "Saving…" : issue ? "Save changes" : "Create issue"}
-            </button>
-            <span role="status">{feedback}</span>
-          </div>
-        </fieldset>
-      </form>
-    </>
+  const form = (
+    <form className="editor" onSubmit={submit}>
+      <fieldset disabled={saving}>
+        <div className="editor-head">
+          <span className="team-chip">ENG</span>
+          <span aria-hidden="true">›</span>
+          <h1 id="editor-title">
+            {issue ? "ENG-" + issue.number : "New issue"}
+          </h1>
+          <a className="close" href="/app" aria-label="Back to team issues">
+            ×
+          </a>
+        </div>
+        <input
+          className="issue-title"
+          ref={titleInput}
+          aria-label="Issue title"
+          placeholder="Issue title"
+          autoFocus={!issue}
+          required
+          maxLength={200}
+          value={draft.title}
+          onChange={(e) => change("title", e.target.value)}
+        />
+        <textarea
+          aria-label="Description"
+          placeholder="Add description…"
+          rows={3}
+          value={draft.description}
+          onChange={(e) => change("description", e.target.value)}
+        />
+        <div className="properties">
+          {(["status", "priority", "assignee"] as const).map((key) => (
+            <label className="property" key={key}>
+              {key === "status" ? (
+                <i className="status-dot" data-status={draft.status} />
+              ) : (
+                <span aria-hidden="true">{key === "priority" ? "⋯" : "◎"}</span>
+              )}
+              {draft[key] || "Assignee"}
+              <select
+                aria-label={key}
+                value={draft[key]}
+                onChange={(e) => change(key, e.target.value)}
+              >
+                {properties[key].map((value) => (
+                  <option key={value} value={value}>
+                    {value || "Unassigned"}
+                  </option>
+                ))}
+              </select>
+            </label>
+          ))}
+        </div>
+        <div className="actions">
+          <span role="status">{feedback}</span>
+          {!issue && (
+            <label className="create-more">
+              <input
+                type="checkbox"
+                checked={createMore}
+                onChange={(e) => setCreateMore(e.target.checked)}
+              />
+              Create more
+            </label>
+          )}
+          <button>
+            {saving ? "Saving…" : issue ? "Save changes" : "Create issue"}
+          </button>
+        </div>
+      </fieldset>
+    </form>
+  );
+  return issue ? (
+    form
+  ) : (
+    <ComposerDialog onDismiss={() => location.assign("/app")}>
+      {form}
+    </ComposerDialog>
   );
 }
 
@@ -237,10 +295,16 @@ function Workspace() {
   const selected = issues?.find((issue) => issuePath(issue.number) === path);
   return (
     <div className="workspace">
-      <header>
+      <aside>
         <Brand />
-        <span>Demo workspace</span>
-      </header>
+        <nav aria-label="Your teams">
+          <p>Your teams</p>
+          <Team />
+          <a href="/app" className="nav-issues">
+            ▢ &nbsp; Issues
+          </a>
+        </nav>
+      </aside>
       <main>
         {error ? (
           <div role="alert">
@@ -249,12 +313,12 @@ function Workspace() {
           </div>
         ) : !issues ? (
           <p role="status">Opening workspace…</p>
-        ) : path === "/app" ? (
+        ) : path === "/app" || path === "/app/issues/new" ? (
           <>
-            <h1 className="workspace-title">Workspace</h1>
             <IssueList issues={issues} />
+            {path === "/app/issues/new" && <Editor />}
           </>
-        ) : selected || path === "/app/issues/new" ? (
+        ) : selected ? (
           <Editor issue={selected} />
         ) : (
           <>

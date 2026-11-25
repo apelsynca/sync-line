@@ -1,4 +1,4 @@
-import type { ReactNode } from "react";
+import { useEffect, useRef, type ReactNode } from "react";
 import "./theme.css";
 
 export function Brand() {
@@ -50,5 +50,33 @@ export function ButtonLink({
     <a className="button" href={href}>
       {children}
     </a>
+  );
+}
+
+export function ComposerDialog({
+  children,
+  onDismiss,
+}: {
+  children: ReactNode;
+  onDismiss: () => void;
+}) {
+  const dialog = useRef<HTMLDialogElement>(null);
+  useEffect(() => {
+    const element = dialog.current!;
+    element.showModal();
+    return () => element.close();
+  }, []);
+  return (
+    <dialog
+      ref={dialog}
+      className="composer"
+      aria-labelledby="editor-title"
+      onCancel={(event) => {
+        event.preventDefault();
+        onDismiss();
+      }}
+    >
+      {children}
+    </dialog>
   );
 }

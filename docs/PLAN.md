@@ -19,6 +19,7 @@ This plan assumes “website first” includes both the public homepage and the 
 2. **Workspace.** Start each visitor in an isolated demo workspace with one team, a handful of realistic issues, and three statuses. Give the team an issue list and each issue a detail page.
 3. **Issue editing.** Support creating an issue, editing its title and description, choosing an assignee and priority, and changing status. Support the same actions by keyboard and pointer.
 4. **Persistence.** Save changes through the Rust API from the first milestone. Give issues stable identifiers such as `ENG-12`. If a save fails, keep the edit available to retry.
+5. **Dark and light themes.** Build both palettes in the shared UI kit. Use the reference workspace and issue composer as the dark baseline. Add a persistent appearance choice and check text, controls, focus rings, and dialog contrast in both themes on the homepage and in the workspace.
 
 **Definition of done.** Two visitors can independently complete the demo without seeing each other’s edits. Each can reload an issue URL, see their saved changes, and navigate back to the team list. The flow works on a narrow screen and with a keyboard.
 

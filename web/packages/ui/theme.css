@@ -1,17 +1,22 @@
 :root {
-  --ink: #183731;
-  --muted: #516861;
-  --paper: #f7f9f5;
-  --line: #d9e2da;
-  --mint: #c0f996;
-  --dark: #112f29;
+  color-scheme: dark;
+  --canvas: #101011;
+  --surface: #161617;
+  --panel: #1b1b1d;
+  --control: #2a2a2d;
+  --hover: #343437;
+  --line: #303033;
+  --ink: #ededee;
+  --muted: #aaaab0;
+  --accent: #5865ce;
+  --focus: #a8afff;
   font:
-    100%/1.5 Inter,
+    100%/1.45 Inter,
     "Segoe UI",
     system-ui,
     sans-serif;
   color: var(--ink);
-  background: var(--paper);
+  background: var(--canvas);
 }
 * {
   box-sizing: border-box;
@@ -25,107 +30,133 @@ textarea,
 select {
   font: inherit;
 }
-a:focus-visible,
-button:focus-visible,
-input:focus-visible,
-textarea:focus-visible,
-select:focus-visible {
-  outline: 3px solid #429e63;
-  outline-offset: 3px;
+:focus-visible {
+  outline: 2px solid var(--focus);
+  outline-offset: 2px;
 }
-.brand {
+.brand,
+.status,
+.person,
+.button,
+button,
+.property,
+.team-chip {
   display: inline-flex;
   align-items: center;
-  gap: 0.65rem;
-  font-size: 1.35rem;
-  font-weight: 730;
-  letter-spacing: -0.055em;
+  gap: 0.45rem;
+}
+.brand {
+  font-weight: 650;
   text-decoration: none;
 }
 .brand-mark {
   display: flex;
   align-items: center;
+  justify-content: center;
   gap: 2px;
-  transform: skew(-24deg);
-  margin: 0 0.2rem;
+  width: 1.5rem;
+  height: 1.5rem;
+  border-radius: 8px;
+  background: #137955;
 }
 .brand-mark i {
-  width: 5px;
-  height: 16px;
-  background: currentColor;
+  background: white;
+  width: 2px;
+  height: 9px;
+  transform: skew(-20deg);
 }
 .brand-mark i:nth-child(2) {
-  height: 24px;
+  height: 13px;
 }
 .button,
 button {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  border: 1px solid transparent;
-  border-radius: 7px;
-  background: var(--ink);
+  border: 0;
+  border-radius: 999px;
+  background: var(--accent);
   color: white;
+  padding: 0.42rem 0.85rem;
+  font-weight: 600;
   text-decoration: none;
-  font-weight: 650;
-  padding: 0.61rem 1rem;
   cursor: pointer;
 }
 .button:hover,
 button:hover {
-  filter: brightness(1.15);
+  filter: brightness(1.12);
 }
 button:disabled {
   opacity: 0.65;
   cursor: wait;
 }
-.status,
-.person {
-  display: inline-flex;
-  align-items: center;
-  gap: 0.55rem;
-  white-space: nowrap;
-}
-.status i {
-  width: 0.88rem;
-  height: 0.88rem;
-  border: 2px dotted #71817b;
+.status i,
+.status-dot {
+  display: inline-block;
+  flex: none;
+  width: 0.9rem;
+  height: 0.9rem;
+  border: 1.6px solid currentColor;
   border-radius: 50%;
-  display: inline-grid;
-  place-items: center;
 }
-.status i[data-status="In progress"] {
-  border: 2px solid #9a7105;
-  background: linear-gradient(90deg, #b78a17 50%, transparent 50%);
+i[data-status="In progress"] {
+  color: #deae55;
+  background: linear-gradient(90deg, currentColor 50%, transparent 50%);
 }
-.status i[data-status="Done"] {
-  border: 0;
-  background: #317b59;
+i[data-status="Done"] {
+  background: var(--accent);
+  border-color: var(--accent);
 }
-.status i[data-status="Done"]:after {
-  content: "✓";
-  font: 600 0.67rem system-ui;
-  color: white;
+.person {
+  color: var(--muted);
 }
 .person i {
-  width: 1.55rem;
-  height: 1.55rem;
-  border-radius: 50%;
   display: grid;
   place-items: center;
-  background: #ecefea;
-  color: #43554e;
-  font: 650 0.65rem system-ui;
+  width: 1.35rem;
+  height: 1.35rem;
+  border-radius: 50%;
+  background: var(--control);
+  font: 600 0.65rem system-ui;
 }
-.person i[data-person="Mira Chen"] {
-  background: #edddcf;
-  color: #754628;
+.composer,
+.editor {
+  background: var(--panel);
+  color: var(--ink);
+  border: 1px solid var(--line);
+  border-radius: 20px;
 }
-.person i[data-person="Theo Park"] {
-  background: #dce4f2;
-  color: #46597b;
+.composer {
+  position: fixed;
+  inset: min(13vh, 9rem) 0 auto;
+  margin: 0 auto;
+  width: min(51rem, calc(100% - 1.5rem));
+  max-height: 84dvh;
+  padding: 0;
+  box-shadow: 0 4px 14px #0006;
 }
-.person i[data-person="Ana Silva"] {
-  background: #e8e0ef;
-  color: #685375;
+.composer::backdrop {
+  background: rgb(0 0 0 / 52%);
+}
+.composer .editor {
+  border: 0;
+}
+.property,
+.team-chip {
+  position: relative;
+  border-radius: 999px;
+  background: var(--control);
+  padding: 0.24rem 0.62rem;
+  color: var(--ink);
+  font-size: 0.84rem;
+}
+.property select {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  opacity: 0;
+  cursor: pointer;
+}
+.property:hover {
+  background: var(--hover);
+}
+.property:focus-within {
+  outline: 2px solid var(--focus);
 }
