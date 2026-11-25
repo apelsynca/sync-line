@@ -8,8 +8,8 @@
   --line: #303033;
   --ink: #ededee;
   --muted: #aaaab0;
-  --accent: #5865ce;
-  --focus: #a8afff;
+  --accent: #ff9852;
+  --focus: var(--accent);
   font:
     100%/1.45 Inter,
     "Segoe UI",
@@ -55,7 +55,7 @@ button {
   border: 0;
   border-radius: 999px;
   background: var(--accent);
-  color: white;
+  color: var(--canvas);
   padding: 0.42rem 0.85rem;
   font-weight: 600;
   text-decoration: none;

@@ -21,7 +21,7 @@
   margin: 0;
 }
 .hero em {
-  color: var(--focus);
+  color: var(--accent);
 }
 .intro {
   max-width: 35rem;
@@ -54,7 +54,7 @@ nav p {
   gap: 0.55rem;
 }
 .team b {
-  color: #cfad55;
+  color: var(--accent);
   font: 700 1rem monospace;
 }
 .nav-issues {
@@ -245,6 +245,6 @@ a.row:hover {
   padding: 0.3rem 0.7rem;
 }
 .list-filters button[aria-pressed="true"] {
-  background: var(--control);
-  color: var(--ink);
+  background: var(--accent);
+  color: var(--canvas);
 }
