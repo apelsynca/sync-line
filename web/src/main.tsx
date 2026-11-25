@@ -1,4 +1,14 @@
+/// <reference types="vite/client" />
 import { useEffect, useRef, useState, type FormEvent } from "react";
+import {
+  ChevronRight,
+  Flag,
+  Layers,
+  ListTodo,
+  Plus,
+  UserRound,
+  X,
+} from "lucide-react";
 import { createRoot } from "react-dom/client";
 import {
   Avatar,
@@ -6,13 +16,24 @@ import {
   ButtonLink,
   ComposerDialog,
   Status,
+  StatusIcon,
 } from "@sync-line/ui";
 import seeds from "../shared/issues.json";
+import { SignIn } from "./SignIn";
+import {
+  activeAccount,
+  composerKey,
+  createIssue,
+  issuePath,
+  readIssues,
+  RequestError,
+  saveIssue,
+  sync,
+  type Fields,
+  type Issue,
+} from "./workspace";
 import "./style.css";
 
-type Fields = (typeof seeds)[number];
-type Issue = Fields & { number: number };
-const issuePath = (number: number) => "/app/issues/ENG-" + number;
 const empty: Fields = {
   title: "",
   description: "",
@@ -24,7 +45,8 @@ const empty: Fields = {
 function Team() {
   return (
     <span className="team">
-      <b aria-hidden="true">E</b>Engineering
+      <Layers aria-hidden="true" size={16} />
+      Engineering
     </span>
   );
 }
@@ -44,11 +66,11 @@ function IssueList({
     >
       <div className="list-head">
         <Team />
-        <span aria-hidden="true">›</span>
+        <ChevronRight size={14} aria-hidden="true" />
         <h2>Issues</h2>
         {!preview && (
           <a className="new-link" href="/app/issues/new">
-            ＋ New issue
+            <Plus aria-hidden="true" size={16} /> New issue
           </a>
         )}
       </div>
@@ -75,21 +97,17 @@ function IssueList({
                   const content = (
                     <>
                       <span className="identifier">ENG-{issue.number}</span>
-                      <i
-                        className="status-dot"
-                        data-status={status}
-                        aria-hidden="true"
-                      />
+                      <StatusIcon value={status} />
                       <strong>{issue.title}</strong>
                       <Avatar name={issue.assignee} />
                     </>
                   );
                   return (
-                    <li key={issue.number}>
+                    <li key={issue.id}>
                       {preview ? (
                         <div className="row">{content}</div>
                       ) : (
-                        <a className="row" href={issuePath(issue.number)}>
+                        <a className="row" href={issuePath(issue.id)}>
                           {content}
                         </a>
                       )}
@@ -121,13 +139,14 @@ function Home() {
           Give every issue an owner, a priority, and a place to land. Try it in
           your own Engineering workspace.
         </p>
-        <ButtonLink href="/app">Try the demo</ButtonLink>
+        <ButtonLink href="/app">Open your workspace</ButtonLink>
       </div>
       <div className="preview">
         <IssueList
           preview
           issues={seeds.map((fields, index) => ({
             ...fields,
+            id: String(index),
             number: index + 1,
           }))}
         />
@@ -136,79 +155,82 @@ function Home() {
   );
 }
 
-async function request(url: string, method: string, body?: object) {
-  const response = await fetch(url, {
-    method,
-    headers: body && { "Content-Type": "application/json" },
-    body: body && JSON.stringify(body),
-  });
-  if (!response.ok) throw new Error("Request failed");
-  return response;
-}
-
 const properties = {
   status: ["Todo", "In progress", "Done"],
-  assignee: ["", "Mira Chen", "Theo Park", "Ana Silva"],
+  assignee: ["", "Me"],
   priority: ["Low", "Medium", "High"],
 };
 
-function Editor({ issue }: { issue?: Issue }) {
-  const [draft, edit] = useState<Fields>(issue ?? empty);
+function Editor({ account, issue }: { account: string; issue?: Issue }) {
+  const draftKey = composerKey(account);
+  const [localDraft, edit] = useState<Fields | undefined>(() =>
+    issue
+      ? undefined
+      : (JSON.parse(localStorage.getItem(draftKey) ?? "null") ?? empty),
+  );
+  const draft = localDraft ?? issue!;
   const titleInput = useRef<HTMLInputElement>(null);
   const [createMore, setCreateMore] = useState(false);
   const [requestId, setRequestId] = useState(() => crypto.randomUUID());
-  const [saving, setSaving] = useState(false);
+  const [creating, setCreating] = useState(false);
   const [feedback, setFeedback] = useState("");
-  function change(key: keyof Fields, value: string) {
-    edit((old) => ({ ...old, [key]: value }));
-    setFeedback("");
+  function persist(fields: Fields) {
+    try {
+      if (issue) {
+        saveIssue(account, { ...issue, ...fields });
+        edit(undefined);
+      } else {
+        edit(fields);
+        localStorage.setItem(draftKey, JSON.stringify(fields));
+      }
+      setFeedback("");
+    } catch {
+      edit(fields);
+      setFeedback("Couldn’t save on this device. Retry or copy your draft.");
+    }
   }
   async function submit(event: FormEvent) {
     event.preventDefault();
-    if (saving) return;
+    if (issue) {
+      persist(draft);
+      return;
+    }
     if (!draft.title.trim()) {
       setFeedback("Enter an issue title.");
       return;
     }
-    setSaving(true);
-    setFeedback("");
+    setCreating(true);
     try {
-      if (issue) {
-        await request("/api/issues/" + issue.number, "PUT", draft);
-        edit({ ...draft, title: draft.title.trim() });
-        setFeedback("Changes saved.");
+      await createIssue(account, requestId, {
+        ...draft,
+        title: draft.title.trim(),
+      });
+      localStorage.removeItem(draftKey);
+      if (createMore) {
+        edit(empty);
+        setRequestId(crypto.randomUUID());
+        setFeedback("");
+        requestAnimationFrame(() => titleInput.current?.focus());
       } else {
-        const response = await request("/api/issues", "POST", {
-          ...draft,
-          request_id: requestId,
-        });
-        const number = await response.json();
-        if (createMore) {
-          edit({ ...empty });
-          setRequestId(crypto.randomUUID());
-          setFeedback(`ENG-${number} created.`);
-          requestAnimationFrame(() => titleInput.current?.focus());
-        } else {
-          location.replace(issuePath(number));
-        }
+        location.replace(issuePath(requestId));
       }
     } catch {
-      setFeedback("Couldn’t save. Your edits are here. Try saving again.");
+      setFeedback("Couldn’t save on this device. Retry or copy your draft.");
     } finally {
-      setSaving(false);
+      setCreating(false);
     }
   }
   const form = (
     <form className="editor" onSubmit={submit}>
-      <fieldset disabled={saving}>
+      <fieldset disabled={creating}>
         <div className="editor-head">
           <span className="team-chip">ENG</span>
-          <span aria-hidden="true">›</span>
+          <ChevronRight size={14} aria-hidden="true" />
           <h1 id="editor-title">
             {issue ? "ENG-" + issue.number : "New issue"}
           </h1>
           <a className="close" href="/app" aria-label="Back to team issues">
-            ×
+            <X size={18} aria-hidden="true" />
           </a>
         </div>
         <input
@@ -220,28 +242,31 @@ function Editor({ issue }: { issue?: Issue }) {
           required
           maxLength={200}
           value={draft.title}
-          onChange={(e) => change("title", e.target.value)}
+          onChange={(e) => persist({ ...draft, title: e.target.value })}
         />
         <textarea
           aria-label="Description"
           placeholder="Add description…"
           rows={3}
+          maxLength={500000}
           value={draft.description}
-          onChange={(e) => change("description", e.target.value)}
+          onChange={(e) => persist({ ...draft, description: e.target.value })}
         />
         <div className="properties">
           {(["status", "priority", "assignee"] as const).map((key) => (
             <label className="property" key={key}>
               {key === "status" ? (
-                <i className="status-dot" data-status={draft.status} />
+                <StatusIcon value={draft.status} />
+              ) : key === "priority" ? (
+                <Flag size={14} aria-hidden="true" />
               ) : (
-                <span aria-hidden="true">{key === "priority" ? "⋯" : "◎"}</span>
+                <UserRound size={14} aria-hidden="true" />
               )}
-              {draft[key] || "Assignee"}
+              {draft[key] || "Unassigned"}
               <select
                 aria-label={key}
                 value={draft[key]}
-                onChange={(e) => change(key, e.target.value)}
+                onChange={(e) => persist({ ...draft, [key]: e.target.value })}
               >
                 {properties[key].map((value) => (
                   <option key={value} value={value}>
@@ -264,9 +289,12 @@ function Editor({ issue }: { issue?: Issue }) {
               Create more
             </label>
           )}
-          <button>
-            {saving ? "Saving…" : issue ? "Save changes" : "Create issue"}
-          </button>
+          {(!issue || feedback) && (
+            <button>{issue ? "Retry" : "Create issue"}</button>
+          )}
+          {issue && !draft.title.trim() && (
+            <span>Enter a title to sync this issue.</span>
+          )}
         </div>
       </fieldset>
     </form>
@@ -280,19 +308,67 @@ function Editor({ issue }: { issue?: Issue }) {
   );
 }
 
-function Workspace() {
-  const [issues, setIssues] = useState<Issue[]>();
-  const [error, setError] = useState(false);
-  const [attempt, retry] = useState(0);
+function Workspace({ account }: { account: string }) {
+  const [issues, setIssues] = useState(() => readIssues(account));
+  const [expired, setExpired] = useState(false);
   useEffect(() => {
-    setError(false);
-    request("/api/workspace", "POST")
-      .then((r) => r.json())
-      .then(setIssues)
-      .catch(() => setError(true));
-  }, [attempt]);
+    let running = false;
+    let queued = false;
+    let closed = false;
+    let timer: number;
+    const refresh = () => setIssues(readIssues(account));
+    async function synchronize() {
+      if (running) {
+        queued = true;
+        return;
+      }
+      running = true;
+      try {
+        await sync(account);
+        if (!closed) setExpired(false);
+      } catch (cause) {
+        if (!closed && cause instanceof RequestError && cause.status === 401)
+          setExpired(true);
+      } finally {
+        running = false;
+        if (queued && !closed) {
+          queued = false;
+          schedule();
+        }
+      }
+    }
+    function schedule() {
+      clearTimeout(timer);
+      timer = window.setTimeout(synchronize, 250);
+    }
+    function onEdit() {
+      refresh();
+      schedule();
+    }
+    function onStorage(event: StorageEvent) {
+      if (activeAccount() !== account) location.reload();
+      else if (event.key?.startsWith("sync-line:" + account + ":")) refresh();
+    }
+    window.addEventListener("workspace-edit", onEdit);
+    window.addEventListener("workspace-refresh", refresh);
+    window.addEventListener("storage", onStorage);
+    window.addEventListener("online", schedule);
+    window.addEventListener("focus", schedule);
+    const interval = window.setInterval(schedule, 15000);
+    void synchronize();
+    return () => {
+      closed = true;
+      clearTimeout(timer);
+      clearInterval(interval);
+      window.removeEventListener("workspace-edit", onEdit);
+      window.removeEventListener("workspace-refresh", refresh);
+      window.removeEventListener("storage", onStorage);
+      window.removeEventListener("online", schedule);
+      window.removeEventListener("focus", schedule);
+    };
+  }, [account]);
   const path = location.pathname;
-  const selected = issues?.find((issue) => issuePath(issue.number) === path);
+  const selected = issues.find((issue) => issuePath(issue.id) === path);
   return (
     <div className="workspace">
       <aside>
@@ -301,25 +377,28 @@ function Workspace() {
           <p>Your teams</p>
           <Team />
           <a href="/app" className="nav-issues">
-            ▢ &nbsp; Issues
+            <ListTodo size={16} aria-hidden="true" /> Issues
           </a>
         </nav>
       </aside>
       <main>
-        {error ? (
-          <div role="alert">
-            Couldn’t open your workspace.{" "}
-            <button onClick={() => retry(attempt + 1)}>Retry</button>
-          </div>
-        ) : !issues ? (
-          <p role="status">Opening workspace…</p>
-        ) : path === "/app" || path === "/app/issues/new" ? (
+        {expired && <a href={path + "?signin"}>Sign in to sync</a>}
+        {path === "/app" || path === "/app/issues/new" ? (
           <>
-            <IssueList issues={issues} />
-            {path === "/app/issues/new" && <Editor />}
+            {issues.length ? (
+              <IssueList issues={issues} />
+            ) : (
+              <section className="empty">
+                <h1>Your issues</h1>
+                <ButtonLink href="/app/issues/new">
+                  <Plus size={16} aria-hidden="true" /> Create your first issue
+                </ButtonLink>
+              </section>
+            )}
+            {path === "/app/issues/new" && <Editor account={account} />}
           </>
         ) : selected ? (
-          <Editor issue={selected} />
+          <Editor account={account} issue={selected} />
         ) : (
           <>
             <h1>Issue not found</h1>
@@ -331,6 +410,17 @@ function Workspace() {
   );
 }
 
+if (import.meta.env.PROD && "serviceWorker" in navigator) {
+  void navigator.serviceWorker.register("/sw.js").catch(() => {});
+}
+
+const account = activeAccount();
 createRoot(document.getElementById("root")!).render(
-  location.pathname === "/" ? <Home /> : <Workspace />,
+  location.pathname === "/" ? (
+    <Home />
+  ) : account && !new URLSearchParams(location.search).has("signin") ? (
+    <Workspace account={account} />
+  ) : (
+    <SignIn />
+  ),
 );

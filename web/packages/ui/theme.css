@@ -69,22 +69,14 @@ button:disabled {
   opacity: 0.65;
   cursor: wait;
 }
-.status i,
-.status-dot {
-  display: inline-block;
+.status-icon {
   flex: none;
-  width: 0.9rem;
-  height: 0.9rem;
-  border: 1.6px solid currentColor;
-  border-radius: 50%;
 }
-i[data-status="In progress"] {
+.status-icon[data-status="In progress"] {
   color: #deae55;
-  background: linear-gradient(90deg, currentColor 50%, transparent 50%);
 }
-i[data-status="Done"] {
-  background: var(--accent);
-  border-color: var(--accent);
+.status-icon[data-status="Done"] {
+  color: var(--accent);
 }
 .person {
   color: var(--muted);

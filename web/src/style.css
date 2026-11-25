@@ -53,12 +53,18 @@ nav p {
   align-items: center;
   gap: 0.55rem;
 }
-.team b {
+.team > svg {
   color: var(--accent);
-  font: 700 1rem monospace;
+}
+.nav-issues,
+.new-link,
+.close {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
 }
 .nav-issues {
-  display: block;
+  display: flex;
   margin: 0.45rem 0 0 0.8rem;
   padding: 0.35rem 0.65rem;
   background: var(--control);
@@ -247,4 +253,38 @@ a.row:hover {
 .list-filters button[aria-pressed="true"] {
   background: var(--accent);
   color: var(--canvas);
+}
+.auth {
+  width: min(27rem, 100%);
+  margin: 10vh auto;
+  padding: 1rem;
+}
+.auth form,
+.empty {
+  padding: 1.5rem;
+}
+.auth form {
+  background: var(--surface);
+  margin-top: 2rem;
+  border: 1px solid var(--line);
+  border-radius: 12px;
+}
+.auth h1,
+.empty h1 {
+  font-size: 1.4rem;
+  margin: 0 0 1rem;
+}
+.auth input {
+  display: block;
+  width: 100%;
+  padding: 0.55rem;
+  margin-top: 0.4rem;
+  border: 1px solid var(--line);
+  border-radius: 6px;
+  background: var(--panel);
+  color: var(--ink);
+}
+.secondary {
+  background: var(--control);
+  color: var(--ink);
 }

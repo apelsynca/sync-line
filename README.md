@@ -1,30 +1,42 @@
 # Sync Line
 
-A browser-based issue tracker with a private Engineering demo for each visitor. Vite serves the React interface and forwards /api requests to a separate Axum process. PostgreSQL stores issues and a browser cookie identifies the demo workspace for 30 days.
+Sync Line is a personal issue tracker. Sign in with an email code to open a private Engineering workspace. Issue edits are saved in the browser and sync automatically with PostgreSQL. Bookmarks use a permanent issue ID, and the production web build can reopen them offline.
 
 ## Project layout
 
-- `web/` contains the React app, UI package, demo data, and frontend tooling.
+- `web/` contains the React app, shared UI, and homepage preview data.
 - `server/` contains the Axum API and PostgreSQL migrations.
 - `desktop/` is reserved for the planned Tauri client.
-- [Product plan](docs/PLAN.md) describes the demo and roadmap.
+- The [product plan](docs/PLAN.md) tracks the solo workflow and later releases.
 
 ## Run locally
 
-Use a current stable Rust toolchain, Bun 1.4.4, and a running PostgreSQL server. From the repository root, create a database your local PostgreSQL role can access and install the frontend dependencies.
+Use a current stable Rust toolchain, Bun 1.4.4, PostgreSQL, and a sendmail-compatible mail transport. From the repository root, create a database your PostgreSQL role can access and install the frontend dependencies.
 
 ```sh
 createdb sync_line
 bun install --cwd web --frozen-lockfile
 ```
 
-Add your connection string to `server/.env` (a repository-root `.env` also works). Git ignores this file.
+Set the connection string in `server/.env`. The API submits sign-in messages to `/usr/sbin/sendmail -i -t` by default. Set `SENDMAIL_PATH` to use another mail transport or a local development mail catcher that accepts a message on standard input.
 
 ```dotenv
 DATABASE_URL=postgresql:///sync_line
 ```
 
-Run these commands from the repository root in separate terminals.
+For a local test without mail delivery, run the following in the API terminal before starting the server. Read the latest message in the temporary directory printed by `echo "$mail_dir"` after requesting a code.
+
+```sh
+mail_dir=$(mktemp -d)
+export SENDMAIL_PATH="$mail_dir/sendmail"
+cat > "$SENDMAIL_PATH" <<'SH'
+#!/bin/sh
+cat > "$(dirname "$0")/message"
+SH
+chmod 700 "$SENDMAIL_PATH"
+```
+
+In separate terminals, start the API and the Vite development server.
 
 ```sh
 bun run server
@@ -34,10 +46,17 @@ bun run server
 bun run client
 ```
 
-Open the URL Vite prints (usually http://localhost:5173) and choose **Try the demo**. The API applies migrations and listens on `127.0.0.1:3000`. To change its address, set `BIND_ADDR` in `.env` and launch the client with the matching target, for example `API_PROXY_TARGET=http://127.0.0.1:3001 bun run client`.
+Open the localhost URL Vite prints and choose **Open your workspace**. Codes expire after ten minutes. The API applies migrations and listens on `127.0.0.1:3000`. To change its address, set `BIND_ADDR` in the API environment and launch Vite with the corresponding `API_PROXY_TARGET`.
 
-## Check the demo
+## Check the offline workflow
 
-Create an issue, assign it, change its status to Done, and save. Reload its detail URL and return to **Team issues**. Open the same URL in another browser profile to check workspace isolation. Issue numbers start at ENG-1 independently in each workspace.
+Keep the API running. Build and serve the production client so the service worker can cache the app for offline navigation.
 
-Run `cargo test --manifest-path server/Cargo.toml` with `DATABASE_URL` set to exercise concurrent creation retries and workspace isolation against PostgreSQL. SQLx creates a temporary test database, so the test role needs permission to create databases.
+```sh
+bun run --cwd web build
+bun run --cwd web vite preview
+```
+
+Open the preview URL on localhost or serve the app over HTTPS. Sign in, create ENG-1, and bookmark it. Disconnect, edit the issue, close the browser, and reopen the bookmark. Create ENG-2 offline, then reconnect and sign in with the same email in a second browser profile to check the numbers and edits.
+
+Run `cargo test` from `server/` with `DATABASE_URL` set to exercise sign-in code expiry and reuse, account isolation, and concurrent upload retries. SQLx creates temporary databases, so the test role needs permission to create databases.

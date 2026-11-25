@@ -4,13 +4,13 @@ The first release is a private issue tracker for one person’s day-to-day work.
 
 ## Where the browser app stands
 
-| Area | Implemented in the demo | Work for the solo release |
+| Area | Implemented | Next work |
 |---|---|---|
-| Homepage and workspace | React and TypeScript serve a homepage preview, grouped issue list, composer, and issue detail screen. They use the shared UI package and dark theme. | Reuse these screens. Lead from the preview into email sign-in and an empty personal workspace. Verify the workflow on a narrow screen, by keyboard, and by pointer. |
-| Issues | The editor supports title, description, priority, assignee, and the Todo, In progress, and Done statuses. Detail URLs use the display number. | Offer **Me** and **Unassigned**. Give each issue a permanent internal ID at creation so its URL survives renumbering. |
-| Identity and storage | A 30-day browser cookie identifies a PostgreSQL demo workspace containing four sample issues. The Axum and SQLx API assigns issue numbers and handles retried creates. The editor waits for server saves. | Add recoverable accounts, durable local edits, offline reopening, and automatic sync. Migrate eligible demo work when its user signs in. |
+| Homepage and workspace | The public preview contains four sample issues. Email-code sign-in opens a private personal workspace. New accounts start empty. | Add explicit sign-out with pending edits. |
+| Issues | Users can create, assign to **Me** or leave **Unassigned**, and edit issues offline. Each bookmark uses a permanent issue ID. | Merge concurrent edits across devices and review competing field values. |
+| Storage and sync | The browser stores edits locally and sends them automatically. The production build caches the app for offline reopening. PostgreSQL stores synced issues by account. | Exercise session and storage failures and import eligible demo work. |
 
-The existing server test covers concurrent create retries and workspace isolation in the demo. The release checks below still need verification through the browser.
+**Progress.** Release 1, step 1 passed in two Chromium profiles using a local test mailbox. The check included a browser restart offline, recovery after clearing local account data, keyboard and pointer input, and a narrow viewport. Step 2 is next.
 
 ## Release 1 · Solo work across devices
 
