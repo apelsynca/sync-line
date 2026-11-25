@@ -25,7 +25,7 @@ Add your connection string to a file named `.env` in the repository root. Git ig
 DATABASE_URL=postgresql:///sync_line
 ```
 
-Start the app from the repository root. Bun loads `.env` automatically.
+Start the app from the repository root. The server loads `.env` automatically.
 
 ```sh
 bun start

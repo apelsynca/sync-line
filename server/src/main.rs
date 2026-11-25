@@ -193,7 +193,7 @@ async fn update(
 
 #[tokio::main]
 async fn main() -> Result<(), Box<dyn std::error::Error>> {
-    let pool = PgPool::connect(&std::env::var("DATABASE_URL")?).await?;
+    let pool = PgPool::connect(&dotenvy::var("DATABASE_URL")?).await?;
     sqlx::migrate!().run(&pool).await?;
     let dist = std::path::Path::new(env!("CARGO_MANIFEST_DIR")).join("../web/dist");
     let index = ServeFile::new(dist.join("index.html"));
@@ -207,7 +207,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         .nest_service("/assets", ServeDir::new(dist.join("assets")))
         .fallback(get(|| async { StatusCode::NOT_FOUND }))
         .with_state(pool);
-    let address = std::env::var("BIND_ADDR").unwrap_or_else(|_| "127.0.0.1:3000".into());
+    let address = dotenvy::var("BIND_ADDR").unwrap_or_else(|_| "127.0.0.1:3000".into());
     let listener = tokio::net::TcpListener::bind(address).await?;
     println!("Sync Line listening on http://{}", listener.local_addr()?);
     axum::serve(listener, app).await?;
