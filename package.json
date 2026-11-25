@@ -2,7 +2,7 @@
   "private": true,
   "scripts": {
     "client": "bun run --bun --cwd web dev",
-    "server": "cargo run --manifest-path server/Cargo.toml",
+    "server": "cd server && cargo run",
     "start": "bun run server"
   }
 }

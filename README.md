@@ -18,7 +18,7 @@ createdb sync_line
 bun install --cwd web --frozen-lockfile
 ```
 
-Add your connection string to a file named `.env` in the repository root. Git ignores this file.
+Add your connection string to `server/.env` (a repository-root `.env` also works). Git ignores this file.
 
 ```dotenv
 DATABASE_URL=postgresql:///sync_line
@@ -34,7 +34,7 @@ bun run server
 bun run client
 ```
 
-Open the URL Vite prints (usually http://localhost:5173) and choose **Try the demo**. The API loads the root `.env`, applies migrations, and listens on `127.0.0.1:3000`. To change its address, set `BIND_ADDR` in `.env` and launch the client with the matching target, for example `API_PROXY_TARGET=http://127.0.0.1:3001 bun run client`.
+Open the URL Vite prints (usually http://localhost:5173) and choose **Try the demo**. The API applies migrations and listens on `127.0.0.1:3000`. To change its address, set `BIND_ADDR` in `.env` and launch the client with the matching target, for example `API_PROXY_TARGET=http://127.0.0.1:3001 bun run client`.
 
 ## Check the demo
 
