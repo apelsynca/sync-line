@@ -2,6 +2,13 @@
 
 A browser-based issue tracker with a private Engineering demo for each visitor. The React interface and Axum API run on the same origin. PostgreSQL stores issues and a browser cookie identifies the demo workspace for 30 days.
 
+## Project layout
+
+- `web/` contains the React app and its Vite and TypeScript configuration.
+- `desktop/` is reserved for the planned Tauri client.
+- `packages/ui/` holds shared UI components, and `shared/` holds demo issue data.
+- `src/` and `migrations/` contain the Rust API and database schema.
+
 ## Run locally
 
 Use a current stable Rust toolchain, Node.js 22.12 or newer, npm, and a running PostgreSQL server. From the repository root, create a database your local PostgreSQL role can access and start the app.

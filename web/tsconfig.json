@@ -8,5 +8,5 @@
     "resolveJsonModule": true,
     "skipLibCheck": true
   },
-  "include": ["web", "packages"]
+  "include": ["src", "../packages/ui"]
 }
