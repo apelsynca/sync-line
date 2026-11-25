@@ -1,15 +1,12 @@
 import { useEffect, useRef, type ReactNode } from "react";
 import "./theme.css";
 
+const logoUrl = new URL("./sync-line-logo.svg", import.meta.url).href;
+
 export function Brand() {
   return (
     <a className="brand" href="/" aria-label="Sync Line home">
-      <span aria-hidden="true" className="brand-mark">
-        <i />
-        <i />
-        <i />
-      </span>
-      Sync Line
+      <img src={logoUrl} alt="" width="309" height="64" />
     </a>
   );
 }

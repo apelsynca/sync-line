@@ -45,28 +45,10 @@ button,
   align-items: center;
   gap: 0.45rem;
 }
-.brand {
-  font-weight: 650;
-  text-decoration: none;
-}
-.brand-mark {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  gap: 2px;
-  width: 1.5rem;
+.brand img {
+  display: block;
+  width: auto;
   height: 1.5rem;
-  border-radius: 8px;
-  background: #137955;
-}
-.brand-mark i {
-  background: white;
-  width: 2px;
-  height: 9px;
-  transform: skew(-20deg);
-}
-.brand-mark i:nth-child(2) {
-  height: 13px;
 }
 .button,
 button {
