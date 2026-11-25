@@ -3,11 +3,10 @@ use axum::{
     extract::{Path, State},
     http::{HeaderMap, StatusCode, header},
     response::{IntoResponse, Response},
-    routing::{get, post, put},
+    routing::{post, put},
 };
 use serde::{Deserialize, Serialize};
 use sqlx::{PgPool, Postgres, Transaction};
-use tower_http::services::{ServeDir, ServeFile};
 use uuid::Uuid;
 
 type ApiError = (StatusCode, &'static str);
@@ -195,17 +194,10 @@ async fn update(
 async fn main() -> Result<(), Box<dyn std::error::Error>> {
     let pool = PgPool::connect(&dotenvy::var("DATABASE_URL")?).await?;
     sqlx::migrate!().run(&pool).await?;
-    let dist = std::path::Path::new(env!("CARGO_MANIFEST_DIR")).join("../web/dist");
-    let index = ServeFile::new(dist.join("index.html"));
     let app = Router::new()
         .route("/api/workspace", post(workspace))
         .route("/api/issues", post(create))
         .route("/api/issues/{number}", put(update))
-        .route_service("/", index.clone())
-        .route_service("/app", index.clone())
-        .route_service("/app/issues/{issue}", index)
-        .nest_service("/assets", ServeDir::new(dist.join("assets")))
-        .fallback(get(|| async { StatusCode::NOT_FOUND }))
         .with_state(pool);
     let address = dotenvy::var("BIND_ADDR").unwrap_or_else(|_| "127.0.0.1:3000".into());
     let listener = tokio::net::TcpListener::bind(address).await?;

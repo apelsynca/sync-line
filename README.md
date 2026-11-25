@@ -1,6 +1,6 @@
 # Sync Line
 
-A browser-based issue tracker with a private Engineering demo for each visitor. The React interface and Axum API run on the same origin. PostgreSQL stores issues and a browser cookie identifies the demo workspace for 30 days.
+A browser-based issue tracker with a private Engineering demo for each visitor. Vite serves the React interface and forwards /api requests to a separate Axum process. PostgreSQL stores issues and a browser cookie identifies the demo workspace for 30 days.
 
 ## Project layout
 
@@ -11,12 +11,11 @@ A browser-based issue tracker with a private Engineering demo for each visitor. 
 
 ## Run locally
 
-Use a current stable Rust toolchain, Bun 1.4.4, and a running PostgreSQL server. From the repository root, create a database your local PostgreSQL role can access and build the frontend.
+Use a current stable Rust toolchain, Bun 1.4.4, and a running PostgreSQL server. From the repository root, create a database your local PostgreSQL role can access and install the frontend dependencies.
 
 ```sh
 createdb sync_line
 bun install --cwd web --frozen-lockfile
-bun run --bun --cwd web build
 ```
 
 Add your connection string to a file named `.env` in the repository root. Git ignores this file.
@@ -25,15 +24,17 @@ Add your connection string to a file named `.env` in the repository root. Git ig
 DATABASE_URL=postgresql:///sync_line
 ```
 
-Start the app from the repository root. The server loads `.env` automatically.
+Run these commands from the repository root in separate terminals.
 
 ```sh
-bun start
+bun run server
 ```
 
-Open [Sync Line](http://127.0.0.1:3000) and choose **Try the demo**. The API applies migrations on startup. Set `DATABASE_URL` to your connection string if your database requires a different role, host, or password.
+```sh
+bun run client
+```
 
-For frontend development, leave the API running on port 3000 and run `bun run --bun --cwd web dev` in a second terminal. Vite serves the interface and proxies API requests. For the combined production build, `BIND_ADDR` overrides the default listener at `127.0.0.1:3000`.
+Open the URL Vite prints (usually http://localhost:5173) and choose **Try the demo**. The API loads the root `.env`, applies migrations, and listens on `127.0.0.1:3000`. To change its address, set `BIND_ADDR` in `.env` and launch the client with the matching target, for example `API_PROXY_TARGET=http://127.0.0.1:3001 bun run client`.
 
 ## Check the demo
 
