@@ -1,0 +1,30 @@
+[
+  {
+    "title": "Polish the onboarding checklist",
+    "description": "Give new teammates a clear starting point on their first visit.",
+    "status": "In progress",
+    "assignee": "Mira Chen",
+    "priority": "High"
+  },
+  {
+    "title": "Add empty states to search",
+    "description": "Show a helpful message when a search has no matches.",
+    "status": "Todo",
+    "assignee": "Theo Park",
+    "priority": "Medium"
+  },
+  {
+    "title": "Review mobile navigation",
+    "description": "Check the team navigation on smaller screens.",
+    "status": "Todo",
+    "assignee": "",
+    "priority": "Medium"
+  },
+  {
+    "title": "Update the color tokens",
+    "description": "Align the workspace colors across the issue list and detail view.",
+    "status": "Done",
+    "assignee": "Ana Silva",
+    "priority": "Low"
+  }
+]

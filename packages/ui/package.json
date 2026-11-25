@@ -1,0 +1,6 @@
+{
+  "name": "@sync-line/ui",
+  "version": "0.1.0",
+  "private": true,
+  "exports": "./index.tsx"
+}
