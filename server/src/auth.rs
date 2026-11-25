@@ -20,6 +20,7 @@ pub fn routes() -> Router<PgPool> {
     Router::new()
         .route("/api/auth/code", post(request_code))
         .route("/api/auth/verify", post(verify))
+        .route("/api/auth/sign-out", post(sign_out))
 }
 
 #[derive(Deserialize)]
@@ -31,6 +32,7 @@ struct EmailInput {
 struct Verification {
     email: String,
     code: String,
+    expected_workspace: Option<Uuid>,
 }
 
 #[derive(Serialize)]
@@ -159,6 +161,13 @@ async fn verify(
         .fetch_optional(&mut *tx)
         .await
         .map_err(db_error)?;
+    if input.expected_workspace.is_some() && input.expected_workspace != existing {
+        tx.commit().await.map_err(db_error)?;
+        return Err((
+            StatusCode::CONFLICT,
+            "Use the email address for this workspace.",
+        ));
+    }
     let id = match existing {
         Some(id) => id,
         None => {
@@ -187,12 +196,8 @@ async fn verify(
     Ok(response)
 }
 
-pub async fn authorize(
-    pool: &PgPool,
-    headers: &HeaderMap,
-    workspace: Uuid,
-) -> Result<(), ApiError> {
-    let token = headers
+fn session_token(headers: &HeaderMap) -> Option<Uuid> {
+    headers
         .get(header::COOKIE)
         .and_then(|v| v.to_str().ok())
         .and_then(|cookies| {
@@ -201,7 +206,39 @@ pub async fn authorize(
                 Uuid::parse_str(token).ok()
             })
         })
-        .ok_or(UNAUTHORIZED)?;
+}
+
+#[derive(Deserialize)]
+struct SignOut {}
+
+async fn sign_out(
+    State(pool): State<PgPool>,
+    headers: HeaderMap,
+    _: Json<SignOut>,
+) -> Result<Response, ApiError> {
+    if let Some(token) = session_token(&headers) {
+        sqlx::query("DELETE FROM sessions WHERE digest=sha256(uuid_send($1))")
+            .bind(token)
+            .execute(&pool)
+            .await
+            .map_err(db_error)?;
+    }
+    let mut response = StatusCode::NO_CONTENT.into_response();
+    response.headers_mut().insert(
+        header::SET_COOKIE,
+        "sync_line_session=; HttpOnly; Secure; SameSite=Strict; Path=/api; Max-Age=0"
+            .parse()
+            .unwrap(),
+    );
+    Ok(response)
+}
+
+pub async fn authorize(
+    pool: &PgPool,
+    headers: &HeaderMap,
+    workspace: Uuid,
+) -> Result<(), ApiError> {
+    let token = session_token(headers).ok_or(UNAUTHORIZED)?;
     let authorized: bool = sqlx::query_scalar("SELECT EXISTS (SELECT 1 FROM sessions WHERE digest=sha256(uuid_send($1)) AND workspace_id=$2 AND expires_at > now())")
         .bind(token).bind(workspace).fetch_one(pool).await.map_err(db_error)?;
     if authorized {
@@ -224,6 +261,7 @@ mod tests {
             Json(Verification {
                 email: email.into(),
                 code: code.into(),
+                expected_workspace: None,
             }),
         )
         .await
@@ -274,6 +312,44 @@ mod tests {
             redeem(&pool, email, "01234567").await.unwrap_err(),
             INVALID_CODE
         );
+    }
+
+    #[sqlx::test]
+    async fn resuming_sync_requires_the_open_workspace(pool: PgPool) {
+        let (account, _) = sign_in(&pool, "owner@example.test").await;
+        let other = "another@example.test";
+        issue_code(&pool, other, "01234567").await.unwrap();
+        let error = verify(
+            State(pool),
+            Json(Verification {
+                email: other.into(),
+                code: "01234567".into(),
+                expected_workspace: Some(account),
+            }),
+        )
+        .await
+        .unwrap_err();
+        assert_eq!(error.0, StatusCode::CONFLICT);
+    }
+
+    #[sqlx::test]
+    async fn signing_out_revokes_only_the_current_session(pool: PgPool) {
+        let (account, first) = sign_in(&pool, "solo@example.test").await;
+        let (_, second) = sign_in(&pool, "solo@example.test").await;
+        for _ in 0..2 {
+            let response = sign_out(State(pool.clone()), first.clone(), Json(SignOut {}))
+                .await
+                .unwrap();
+            assert_eq!(response.status(), StatusCode::NO_CONTENT);
+            assert!(
+                response.headers()[header::SET_COOKIE]
+                    .to_str()
+                    .unwrap()
+                    .contains("Max-Age=0")
+            );
+        }
+        assert_eq!(authorize(&pool, &first, account).await, Err(UNAUTHORIZED));
+        authorize(&pool, &second, account).await.unwrap();
     }
 
     fn issue(title: &str) -> Json<Fields> {

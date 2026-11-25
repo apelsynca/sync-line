@@ -6,11 +6,11 @@ The first release is a private issue tracker for one person’s day-to-day work.
 
 | Area | Implemented | Next work |
 |---|---|---|
-| Homepage and workspace | The public preview contains four sample issues. Email-code sign-in opens a private personal workspace. New accounts start empty. | Add explicit sign-out with pending edits. |
+| Homepage and workspace | The public preview contains four sample issues. Email-code sign-in opens a private personal workspace. New accounts start empty. Sign-out closes the workspace across tabs, including offline. | Bring eligible demo issues into the personal workspace on sign-in. |
 | Issues | Users can create, assign to **Me** or leave **Unassigned**, and edit issues offline. Each bookmark uses a permanent issue ID. | Merge concurrent edits across devices and review competing field values. |
-| Storage and sync | The browser stores edits locally and sends them automatically. The production build caches the app for offline reopening. PostgreSQL stores synced issues by account. | Exercise session and storage failures and import eligible demo work. |
+| Storage and sync | The browser stores edits locally and sends them automatically. The production build caches the app for offline reopening. After session expiry the editor stays usable. Failed local writes keep the draft available to retry or copy. | Merge concurrent work from multiple devices. |
 
-**Progress.** Release 1, step 1 passed in two Chromium profiles using a local test mailbox. The check included a browser restart offline, recovery after clearing local account data, keyboard and pointer input, and a narrow viewport. Step 2 is next.
+**Progress.** Release 1, step 1 passed in two Chromium profiles using a local test mailbox. The check included a browser restart offline, recovery after clearing local account data, keyboard and pointer input, and a narrow viewport. Step 2 passed in Chromium with offline sign-out, two accounts in the same browser, an expired session, and a simulated storage quota failure. Returning to the original account uploaded its pending edit once. Step 3 is next.
 
 ## Release 1 · Solo work across devices
 

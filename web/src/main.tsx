@@ -5,6 +5,8 @@ import {
   Flag,
   Layers,
   ListTodo,
+  LogIn,
+  Copy,
   Plus,
   UserRound,
   X,
@@ -14,19 +16,21 @@ import {
   Avatar,
   Brand,
   ButtonLink,
+  Modal,
   ComposerDialog,
   Status,
   StatusIcon,
 } from "@sync-line/ui";
 import seeds from "../shared/issues.json";
-import { SignIn } from "./SignIn";
+import { SignIn, SignInForm } from "./SignIn";
+import { SignOutButton } from "./SignOutButton";
+import { RequestError } from "./api";
+import { activeAccount, watchSession } from "./session";
 import {
-  activeAccount,
   composerKey,
   createIssue,
   issuePath,
   readIssues,
-  RequestError,
   saveIssue,
   sync,
   type Fields,
@@ -161,7 +165,17 @@ const properties = {
   priority: ["Low", "Medium", "High"],
 };
 
-function Editor({ account, issue }: { account: string; issue?: Issue }) {
+function Editor({
+  account,
+  issue,
+  writeFailed,
+  setWriteFailed,
+}: {
+  account: string;
+  issue?: Issue;
+  writeFailed: boolean;
+  setWriteFailed: (failed: boolean) => void;
+}) {
   const draftKey = composerKey(account);
   const [localDraft, edit] = useState<Fields | undefined>(() =>
     issue
@@ -174,6 +188,28 @@ function Editor({ account, issue }: { account: string; issue?: Issue }) {
   const [requestId, setRequestId] = useState(() => crypto.randomUUID());
   const [creating, setCreating] = useState(false);
   const [feedback, setFeedback] = useState("");
+  function reportWriteFailure() {
+    setWriteFailed(true);
+    setFeedback("Couldn’t save on this device. Retry or copy your draft.");
+  }
+
+  async function copyDraft() {
+    try {
+      await navigator.clipboard.writeText(
+        [
+          draft.title,
+          draft.description,
+          draft.status,
+          draft.priority,
+          draft.assignee || "Unassigned",
+        ].join("\n"),
+      );
+      setFeedback("Draft copied. Retry to save it on this device.");
+    } catch {
+      setFeedback("Select the text in the editor to copy it, or retry saving.");
+    }
+  }
+
   function persist(fields: Fields) {
     try {
       if (issue) {
@@ -183,10 +219,11 @@ function Editor({ account, issue }: { account: string; issue?: Issue }) {
         edit(fields);
         localStorage.setItem(draftKey, JSON.stringify(fields));
       }
+      setWriteFailed(false);
       setFeedback("");
     } catch {
       edit(fields);
-      setFeedback("Couldn’t save on this device. Retry or copy your draft.");
+      reportWriteFailure();
     }
   }
   async function submit(event: FormEvent) {
@@ -206,6 +243,7 @@ function Editor({ account, issue }: { account: string; issue?: Issue }) {
         title: draft.title.trim(),
       });
       localStorage.removeItem(draftKey);
+      setWriteFailed(false);
       if (createMore) {
         edit(empty);
         setRequestId(crypto.randomUUID());
@@ -215,7 +253,7 @@ function Editor({ account, issue }: { account: string; issue?: Issue }) {
         location.replace(issuePath(requestId));
       }
     } catch {
-      setFeedback("Couldn’t save on this device. Retry or copy your draft.");
+      reportWriteFailure();
     } finally {
       setCreating(false);
     }
@@ -289,9 +327,17 @@ function Editor({ account, issue }: { account: string; issue?: Issue }) {
               Create more
             </label>
           )}
-          {(!issue || feedback) && (
-            <button>{issue ? "Retry" : "Create issue"}</button>
+          {writeFailed && (
+            <>
+              <button type="button" className="secondary" onClick={copyDraft}>
+                <Copy size={14} aria-hidden="true" /> Copy draft
+              </button>
+              <button type="button" onClick={() => persist(draft)}>
+                Retry save
+              </button>
+            </>
           )}
+          {!issue && <button>Create issue</button>}
           {issue && !draft.title.trim() && (
             <span>Enter a title to sync this issue.</span>
           )}
@@ -311,6 +357,8 @@ function Editor({ account, issue }: { account: string; issue?: Issue }) {
 function Workspace({ account }: { account: string }) {
   const [issues, setIssues] = useState(() => readIssues(account));
   const [expired, setExpired] = useState(false);
+  const [writeFailed, setWriteFailed] = useState(false);
+  const [signingIn, setSigningIn] = useState(false);
   useEffect(() => {
     let running = false;
     let queued = false;
@@ -346,8 +394,7 @@ function Workspace({ account }: { account: string }) {
       schedule();
     }
     function onStorage(event: StorageEvent) {
-      if (activeAccount() !== account) location.reload();
-      else if (event.key?.startsWith("sync-line:" + account + ":")) refresh();
+      if (event.key?.startsWith("sync-line:" + account + ":")) refresh();
     }
     window.addEventListener("workspace-edit", onEdit);
     window.addEventListener("workspace-refresh", refresh);
@@ -380,9 +427,35 @@ function Workspace({ account }: { account: string }) {
             <ListTodo size={16} aria-hidden="true" /> Issues
           </a>
         </nav>
+        <SignOutButton account={account} writeFailed={writeFailed} />
       </aside>
       <main>
-        {expired && <a href={path + "?signin"}>Sign in to sync</a>}
+        {expired && (
+          <button
+            type="button"
+            className="session-action"
+            onClick={() => setSigningIn(true)}
+          >
+            <LogIn size={16} aria-hidden="true" />
+            Sign in to sync
+          </button>
+        )}
+        {signingIn && (
+          <Modal
+            labelledBy="sign-in-title"
+            className="session-dialog auth"
+            onDismiss={() => setSigningIn(false)}
+          >
+            <SignInForm
+              expectedWorkspace={account}
+              onCancel={() => setSigningIn(false)}
+              onSignedIn={() => {
+                setExpired(false);
+                setSigningIn(false);
+              }}
+            />
+          </Modal>
+        )}
         {path === "/app" || path === "/app/issues/new" ? (
           <>
             {issues.length ? (
@@ -395,10 +468,21 @@ function Workspace({ account }: { account: string }) {
                 </ButtonLink>
               </section>
             )}
-            {path === "/app/issues/new" && <Editor account={account} />}
+            {path === "/app/issues/new" && (
+              <Editor
+                writeFailed={writeFailed}
+                setWriteFailed={setWriteFailed}
+                account={account}
+              />
+            )}
           </>
         ) : selected ? (
-          <Editor account={account} issue={selected} />
+          <Editor
+            writeFailed={writeFailed}
+            setWriteFailed={setWriteFailed}
+            account={account}
+            issue={selected}
+          />
         ) : (
           <>
             <h1>Issue not found</h1>
@@ -415,12 +499,14 @@ if (import.meta.env.PROD && "serviceWorker" in navigator) {
 }
 
 const account = activeAccount();
+watchSession(account);
+
 createRoot(document.getElementById("root")!).render(
   location.pathname === "/" ? (
     <Home />
   ) : account && !new URLSearchParams(location.search).has("signin") ? (
     <Workspace account={account} />
   ) : (
-    <SignIn />
+    <SignIn expectedWorkspace={account ?? undefined} />
   ),
 );

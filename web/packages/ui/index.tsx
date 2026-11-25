@@ -70,10 +70,14 @@ export function ButtonLink({
   );
 }
 
-export function ComposerDialog({
+export function Modal({
+  labelledBy,
+  className,
   children,
   onDismiss,
 }: {
+  labelledBy: string;
+  className: string;
   children: ReactNode;
   onDismiss: () => void;
 }) {
@@ -86,8 +90,8 @@ export function ComposerDialog({
   return (
     <dialog
       ref={dialog}
-      className="composer"
-      aria-labelledby="editor-title"
+      className={className}
+      aria-labelledby={labelledBy}
       onCancel={(event) => {
         event.preventDefault();
         onDismiss();
@@ -95,5 +99,19 @@ export function ComposerDialog({
     >
       {children}
     </dialog>
+  );
+}
+
+export function ComposerDialog({
+  children,
+  onDismiss,
+}: {
+  children: ReactNode;
+  onDismiss: () => void;
+}) {
+  return (
+    <Modal className="composer" labelledBy="editor-title" onDismiss={onDismiss}>
+      {children}
+    </Modal>
   );
 }

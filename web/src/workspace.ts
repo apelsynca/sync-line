@@ -1,3 +1,5 @@
+import { request } from "./api";
+import { activeAccount } from "./session";
 import type seeds from "../shared/issues.json";
 
 export type Fields = (typeof seeds)[number];
@@ -5,10 +7,6 @@ export type Issue = Fields & { id: string; number: number };
 type Edit = Issue & { revision: string };
 type CloudIssue = Issue & { acknowledged?: string };
 
-const activeKey = "sync-line:account";
-export const activeAccount = () => localStorage.getItem(activeKey);
-export const openAccount = (account: string) =>
-  localStorage.setItem(activeKey, account);
 const cloudKey = (account: string) => `sync-line:${account}:cloud`;
 const editPrefix = (account: string) => `sync-line:${account}:edit:`;
 export const composerKey = (account: string) => `sync-line:${account}:composer`;
@@ -31,6 +29,13 @@ function pending(account: string, cloud: CloudIssue[]) {
   );
   return edits(account).filter(
     (edit) => edit.revision !== acknowledged.get(edit.id),
+  );
+}
+
+export function hasLocalChanges(account: string) {
+  return (
+    pending(account, cloudIssues(account)).length > 0 ||
+    localStorage.getItem(composerKey(account)) !== null
   );
 }
 
@@ -61,28 +66,6 @@ export function createIssue(account: string, id: string, fields: Fields) {
   });
 }
 
-export class RequestError extends Error {
-  constructor(
-    public status: number,
-    message: string,
-  ) {
-    super(message);
-  }
-}
-
-export async function request(url: string, method = "GET", body?: object) {
-  const response = await fetch(url, {
-    method,
-    cache: "no-store",
-    headers: body && { "Content-Type": "application/json" },
-    body: body && JSON.stringify(body),
-    signal: AbortSignal.timeout(15000),
-  });
-  if (!response.ok)
-    throw new RequestError(response.status, await response.text());
-  return response;
-}
-
 function storeCloud(account: string, cloud: CloudIssue[]) {
   const key = cloudKey(account);
   const data = JSON.stringify(cloud);
@@ -95,11 +78,13 @@ function storeCloud(account: string, cloud: CloudIssue[]) {
 export async function sync(account: string) {
   // Share a single upload order across tabs. Edits can still be written during a request.
   await navigator.locks.request("sync-line:sync:" + account, async () => {
+    if (activeAccount() !== account) return;
     const endpoint = "/api/workspaces/" + account + "/issues";
     const cloud = cloudIssues(account);
     for (const edit of pending(account, cloud).sort(
       (a, b) => a.number - b.number,
     )) {
+      if (activeAccount() !== account) return;
       if (!edit.title.trim()) continue;
       const response = await request(endpoint + "/" + edit.id, "PUT", edit);
       const number: number = await response.json();
@@ -111,6 +96,7 @@ export async function sync(account: string) {
       // A newer local revision remains pending even when this response arrives late.
       storeCloud(account, cloud);
     }
+    if (activeAccount() !== account) return;
     const remote: Issue[] = await (await request(endpoint)).json();
     const revisions = new Map(
       cloud.map((issue) => [issue.id, issue.acknowledged]),
