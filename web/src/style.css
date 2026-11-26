@@ -436,19 +436,6 @@ a.row .issue-content,
   -webkit-user-select: none;
   user-select: none;
 }
-.issue-grip {
-  flex-shrink: 0;
-  color: var(--muted);
-}
-.board-card .card-link {
-  position: relative;
-  padding-right: 1rem;
-}
-.card-link .issue-grip {
-  position: absolute;
-  right: 0;
-  top: 0;
-}
 [data-dragging="true"] {
   opacity: 0.45;
 }

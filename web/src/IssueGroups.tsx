@@ -12,7 +12,7 @@ import {
   type CollisionDetection,
 } from "@dnd-kit/core";
 import { Avatar, PropertySelect, Status, StatusIcon } from "@sync-line/ui";
-import { ChevronRight, GripVertical } from "lucide-react";
+import { ChevronRight } from "lucide-react";
 import { issueStatuses } from "./issueViews";
 import { compareIssues, positionBetween } from "./issueOrder";
 import { saveIssue, type Issue } from "./workspace";
@@ -240,9 +240,6 @@ function IssueItem({
   });
   const content = (
     <>
-      {editable && (
-        <GripVertical size={14} className="issue-grip" aria-hidden="true" />
-      )}
       <span className="identifier">ENG-{issue.number}</span>
       {!board && <StatusIcon value={issue.status} />}
       <strong className="issue-content">{issue.title}</strong>
