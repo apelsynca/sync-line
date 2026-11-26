@@ -117,17 +117,23 @@ nav p {
   margin: 0.5rem;
 }
 .issue-group summary {
+  display: flex;
+  align-items: center;
+  gap: 0.55rem;
+  list-style: none;
   cursor: pointer;
   background: var(--panel);
   border-radius: 7px;
   padding: 0.4rem 0.85rem;
 }
-.issue-group summary::marker {
-  color: var(--muted);
-  font-size: 0.75em;
+.issue-group summary::-webkit-details-marker {
+  display: none;
 }
-.issue-group summary > span {
-  margin-left: 0.55rem;
+.group-chevron {
+  color: var(--muted);
+}
+.issue-group[open] > summary .group-chevron {
+  transform: rotate(90deg);
 }
 .issue-group summary > span:last-child,
 .identifier {

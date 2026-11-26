@@ -192,7 +192,7 @@ function IssueList({
               className="issue-search"
               type="search"
               aria-label="Search issues by number, title, or description"
-              placeholder="Search issues…"
+              placeholder="Search issues"
               value={query}
               onChange={(event) => updateFilters({ query: event.target.value })}
             />
@@ -214,6 +214,7 @@ function IssueList({
         return (
           <details className="issue-group" key={status} open>
             <summary>
+              <ChevronRight className="group-chevron" size={14} aria-hidden="true" />
               <Status value={status} />
               <span>{group.length}</span>
             </summary>
@@ -351,7 +352,7 @@ function Editor({
   const [feedback, setFeedback] = useState("");
   function reportWriteFailure() {
     setWriteFailed(true);
-    setFeedback("Couldn’t save on this device. Retry or copy your draft.");
+    setFeedback("Couldn't save on this device. Retry or copy your draft.");
   }
 
   async function copyDraft() {
@@ -486,7 +487,7 @@ function Editor({
         <textarea
           className="issue-content"
           aria-label="Description"
-          placeholder="Add description…"
+          placeholder="Add description"
           rows={3}
           maxLength={500000}
           value={draft.description}

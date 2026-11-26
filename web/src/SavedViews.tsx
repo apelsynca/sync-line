@@ -33,7 +33,7 @@ export function SavedViews({
       try {
         setViews(readViews(key));
       } catch {
-        setError("Couldn’t read saved views on this device.");
+        setError("Couldn't read saved views on this device.");
       }
     }
     function onStorage(event: StorageEvent) {
@@ -71,7 +71,7 @@ export function SavedViews({
       setError(
         cause instanceof DuplicateName
           ? "A view already uses that name."
-          : "Couldn’t save this view on this device. Try again.",
+          : "Couldn't save this view on this device. Try again.",
       );
     }
   }
@@ -83,7 +83,7 @@ export function SavedViews({
       );
       setError("");
     } catch {
-      setError("Couldn’t delete this view on this device. Try again.");
+      setError("Couldn't delete this view on this device. Try again.");
     }
   }
 

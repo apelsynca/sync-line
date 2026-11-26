@@ -58,7 +58,7 @@ export function SignInForm({
       setError(
         cause instanceof RequestError
           ? cause.message
-          : "Couldn’t sign in. Please try again.",
+          : "Couldn't sign in. Please try again.",
       );
     } finally {
       setBusy(false);

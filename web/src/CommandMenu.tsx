@@ -68,7 +68,7 @@ export function CommandMenu({
       go("Backlog", viewPath("backlog"));
       if (term) {
         for (const issue of issues) {
-          go(`ENG-${issue.number} · ${issue.title}`, issuePath(issue.id));
+          go(`ENG-${issue.number} ${issue.title}`, issuePath(issue.id));
         }
       }
     }
@@ -101,7 +101,7 @@ export function CommandMenu({
         onClick={show}
         aria-keyshortcuts="Control+k Meta+k"
         aria-haspopup="dialog"
-        title="Command menu (Ctrl+K / ⌘K)"
+        title="Command menu (Ctrl+K / Cmd+K)"
       >
         <Command aria-hidden="true" size={16} /> Command menu
       </button>
@@ -131,7 +131,7 @@ export function CommandMenu({
             aria-activedescendant={
               current >= 0 ? `command-option-${current}` : undefined
             }
-            placeholder="Search commands and issues…"
+            placeholder="Search commands and issues"
             ref={input}
             value={query}
             onChange={(event) => {

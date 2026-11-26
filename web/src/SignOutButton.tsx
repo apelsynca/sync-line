@@ -19,7 +19,7 @@ export function SignOutButton({
       await signOut(account);
       location.replace("/app");
     } catch {
-      setSignOutError("Couldn’t sign out on this device. Please retry.");
+      setSignOutError("Couldn't sign out on this device. Please retry.");
     }
   }
 
@@ -51,7 +51,7 @@ export function SignOutButton({
           )}
           {writeFailed && (
             <p>
-              Your latest edit couldn’t be saved. Cancel to retry or copy it
+              Your latest edit couldn't be saved. Cancel to retry or copy it
               before signing out.
             </p>
           )}

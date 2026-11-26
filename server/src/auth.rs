@@ -101,7 +101,7 @@ async fn request_code(
             .map_err(db_error)?;
         return Err((
             StatusCode::SERVICE_UNAVAILABLE,
-            "Couldn’t deliver the code. Try again.",
+            "Couldn't deliver the code. Try again.",
         ));
     }
     Ok(StatusCode::NO_CONTENT)

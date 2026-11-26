@@ -41,7 +41,7 @@ export function FieldReview({
       );
       setReview(undefined);
     } catch {
-      setError("Couldn’t save on this device. Retry or copy your edit.");
+      setError("Couldn't save on this device. Retry or copy your edit.");
     }
   }
   return (
