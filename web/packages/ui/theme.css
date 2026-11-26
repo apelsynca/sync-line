@@ -9,7 +9,7 @@
   --ink: #ededee;
   --muted: #aaaab0;
   --accent: #ff9852;
-  --focus: var(--accent);
+  --focus: #aaaab2;
   font:
     100%/1.45 Inter,
     "Segoe UI",
@@ -26,8 +26,7 @@ a {
 }
 button,
 input,
-textarea,
-select {
+textarea {
   font: inherit;
 }
 :focus-visible {
@@ -121,16 +120,47 @@ button:disabled {
   color: var(--ink);
   font-size: 0.84rem;
 }
-.property select {
-  position: absolute;
-  inset: 0;
-  width: 100%;
-  opacity: 0;
-  cursor: pointer;
+.team-chip svg {
+  color: var(--accent);
 }
-.property:hover {
+.property {
+  gap: 0.35rem;
+  font-weight: 500;
+  min-height: 1.8rem;
+}
+.property > svg:last-child {
+  color: var(--muted);
+}
+.property:hover,
+.property[data-state="open"] {
   background: var(--hover);
 }
-.property:focus-within {
-  outline: 2px solid var(--focus);
+.property-menu {
+  z-index: 2;
+  min-width: max(10rem, var(--radix-select-trigger-width));
+  max-height: var(--radix-select-content-available-height);
+  padding: 0.25rem;
+  border: 1px solid #424246;
+  border-radius: 0.65rem;
+  background: #242426;
+  color: var(--ink);
+  box-shadow: 0 6px 20px #0006;
+  font-size: 0.875rem;
+}
+.property-option {
+  display: flex;
+  align-items: center;
+  gap: 0.45rem;
+  padding: 0.45rem 0.55rem;
+  border-radius: 0.4rem;
+  cursor: pointer;
+  user-select: none;
+}
+.property-option[data-highlighted] {
+  background: var(--hover);
+  outline: none;
+}
+.property-check {
+  display: flex;
+  margin-left: auto;
 }

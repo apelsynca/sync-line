@@ -2,12 +2,12 @@
 import { Fragment, useEffect, useRef, useState, type FormEvent } from "react";
 import {
   ChevronRight,
-  Flag,
   Layers,
   ListTodo,
   LogIn,
   Copy,
   Plus,
+  Signal,
   UserRound,
   X,
 } from "lucide-react";
@@ -18,6 +18,7 @@ import {
   ButtonLink,
   Modal,
   ComposerDialog,
+  PropertySelect,
   Status,
   StatusIcon,
 } from "@sync-line/ui";
@@ -159,6 +160,12 @@ const properties = {
   priority: ["Low", "Medium", "High"],
 };
 
+const propertyIcons = {
+  status: (value: string) => <StatusIcon value={value} />,
+  priority: () => <Signal size={15} aria-hidden="true" />,
+  assignee: () => <UserRound size={15} aria-hidden="true" />,
+};
+
 function Editor({
   account,
   issue,
@@ -178,6 +185,9 @@ function Editor({
   );
   const draft: Fields = { ...emptyFields, ...issue, ...localDraft };
   const titleInput = useRef<HTMLInputElement>(null);
+  useEffect(() => {
+    if (!issue) titleInput.current?.focus();
+  }, [issue]);
   const [createMore, setCreateMore] = useState(false);
   const [requestId, setRequestId] = useState(() => crypto.randomUUID());
   const [creating, setCreating] = useState(false);
@@ -257,7 +267,9 @@ function Editor({
     <form className="editor" onSubmit={submit}>
       <fieldset disabled={creating}>
         <div className="editor-head">
-          <span className="team-chip">ENG</span>
+          <span className="team-chip">
+            <Layers size={14} aria-hidden="true" /> ENG
+          </span>
           <ChevronRight size={14} aria-hidden="true" />
           <h1 id="editor-title">
             {issue ? "ENG-" + issue.number : "New issue"}
@@ -271,7 +283,6 @@ function Editor({
           ref={titleInput}
           aria-label="Issue title"
           placeholder="Issue title"
-          autoFocus={!issue}
           required
           maxLength={200}
           value={draft.title}
@@ -304,27 +315,13 @@ function Editor({
         <div className="properties">
           {(["status", "priority", "assignee"] as const).map((key) => (
             <Fragment key={key}>
-              <label className="property">
-                {key === "status" ? (
-                  <StatusIcon value={draft.status} />
-                ) : key === "priority" ? (
-                  <Flag size={14} aria-hidden="true" />
-                ) : (
-                  <UserRound size={14} aria-hidden="true" />
-                )}
-                {draft[key] || "Unassigned"}
-                <select
-                  aria-label={key}
-                  value={draft[key]}
-                  onChange={(e) => persist({ [key]: e.target.value })}
-                >
-                  {properties[key].map((value) => (
-                    <option key={value} value={value}>
-                      {value || "Unassigned"}
-                    </option>
-                  ))}
-                </select>
-              </label>
+              <PropertySelect
+                label={key}
+                value={draft[key]}
+                options={properties[key]}
+                onChange={(value) => persist({ [key]: value })}
+                icon={propertyIcons[key]}
+              />
               {issue && (
                 <FieldReview
                   account={account}

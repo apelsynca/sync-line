@@ -1,6 +1,6 @@
-import { useState } from "react";
+import { useId, useState } from "react";
 import { History } from "lucide-react";
-import { Modal } from "@sync-line/ui";
+import { Modal, PropertySelect } from "@sync-line/ui";
 import { saveIssue, type Issue } from "./workspace";
 import type { Field, Version } from "./versions";
 
@@ -20,6 +20,7 @@ export function FieldReview({
   const [review, setReview] = useState<Version[]>();
   const [value, setValue] = useState("");
   const [error, setError] = useState("");
+  const inputId = useId();
   const heads = issue.versions?.[field] ?? [];
   if (!review && !heads.some((head) => head.value !== heads[0].value))
     return null;
@@ -78,25 +79,24 @@ export function FieldReview({
                 </button>
               </div>
             ))}
-          <label>
-            Value to save
-            {options ? (
-              <select value={value} onChange={(e) => setValue(e.target.value)}>
-                {options.map((option) => (
-                  <option key={option} value={option}>
-                    {display(option)}
-                  </option>
-                ))}
-              </select>
-            ) : (
-              <textarea
-                rows={field === "title" ? 2 : 4}
-                value={value}
-                maxLength={field === "title" ? 200 : 500000}
-                onChange={(e) => setValue(e.target.value)}
-              />
-            )}
-          </label>
+          <label htmlFor={inputId}>Value to save</label>
+          {options ? (
+            <PropertySelect
+              id={inputId}
+              label="Value to save"
+              value={value}
+              options={options}
+              onChange={setValue}
+            />
+          ) : (
+            <textarea
+              id={inputId}
+              rows={field === "title" ? 2 : 4}
+              value={value}
+              maxLength={field === "title" ? 200 : 500000}
+              onChange={(e) => setValue(e.target.value)}
+            />
+          )}
           {error && <p role="alert">{error}</p>}
           <div className="actions">
             <button

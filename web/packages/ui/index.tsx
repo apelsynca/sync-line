@@ -1,6 +1,7 @@
 import { useEffect, useRef, type ReactNode } from "react";
 import { Circle, CircleDot, CircleCheck, UserRound } from "lucide-react";
 import "./theme.css";
+export { PropertySelect } from "./PropertySelect";
 
 const logoUrl = new URL("./sync-line-logo.svg", import.meta.url).href;
 
