@@ -16,7 +16,7 @@ afterAll(async () => {
   await server?.close();
 });
 
-test("dragging an issue title moves and reorders it in Board and list views", async () => {
+async function openWorkspace(path: string) {
   const page = await browser.newPage({
     viewport: { width: 1500, height: 900 },
   });
@@ -36,7 +36,34 @@ test("dragging an issue title moves and reorders it in Board and list views", as
     }));
     localStorage.setItem("sync-line:test:cloud", JSON.stringify(issues));
   });
-  await page.goto(server.resolvedUrls!.local[0] + "app?view=board");
+  await page.goto(server.resolvedUrls!.local[0] + path);
+  return page;
+}
+
+test("the list status icon moves an issue without opening it", async () => {
+  const page = await openWorkspace("app?view=active");
+  const row = page.getByRole("listitem").filter({ hasText: "First" });
+  const picker = row.getByRole("combobox");
+  await picker.click();
+  expect(await page.getByRole("option").allTextContents()).toEqual([
+    "Backlog", "Todo", "In progress", "Done",
+  ]);
+  await page.keyboard.press("Escape");
+  expect(await picker.getAttribute("aria-expanded")).toBe("false");
+  await picker.press("Enter");
+  await page.getByRole("option", { name: "Done", exact: true }).click();
+  await row.waitFor({ state: "detached" });
+  expect(new URL(page.url()).search).toBe("?view=active");
+  await page.getByRole("button", { name: "All issues", exact: true }).click();
+  await page.reload();
+  await picker.waitFor();
+  expect(new URL(page.url()).pathname).toBe("/app");
+  expect(await picker.locator("svg").getAttribute("data-status")).toBe("Done");
+  await page.close();
+});
+
+test("dragging an issue title moves and reorders it in Board and list views", async () => {
+  const page = await openWorkspace("app?view=board");
   const column = (name: string) =>
     page.getByRole("region", { name, exact: true });
   const title = (name: string) => page.getByText(name, { exact: true });

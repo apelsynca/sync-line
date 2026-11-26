@@ -11,6 +11,7 @@ export function PropertySelect({
   options,
   onChange,
   icon,
+  iconOnly = false,
 }: {
   id?: string;
   label: string;
@@ -18,6 +19,7 @@ export function PropertySelect({
   options: readonly string[];
   onChange: (value: string) => void;
   icon?: (value: string) => ReactNode;
+  iconOnly?: boolean;
 }) {
   // Radix reserves the empty string for clearing a selection. The issue model
   // uses it as a selectable assignee, so use its display name inside the menu.
@@ -26,12 +28,21 @@ export function PropertySelect({
       value={value || unassigned}
       onValueChange={(choice) => onChange(choice === unassigned ? "" : choice)}
     >
-      <Select.Trigger id={id} className="property" aria-label={label}>
+      <Select.Trigger
+        id={id}
+        className={iconOnly ? "property property-icon-only" : "property"}
+        aria-label={label}
+        title={iconOnly ? label : undefined}
+      >
         {icon?.(value)}
-        <Select.Value>{value || unassigned}</Select.Value>
-        <Select.Icon asChild>
-          <ChevronDown size={12} />
-        </Select.Icon>
+        {!iconOnly && (
+          <>
+            <Select.Value>{value || unassigned}</Select.Value>
+            <Select.Icon asChild>
+              <ChevronDown size={12} />
+            </Select.Icon>
+          </>
+        )}
       </Select.Trigger>
       <Select.Content
         className="property-menu"

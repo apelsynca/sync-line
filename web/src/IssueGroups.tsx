@@ -238,14 +238,33 @@ function IssueItem({
     id: issue.id,
     disabled: !editable,
   });
-  const content = (
-    <>
-      <span className="identifier">ENG-{issue.number}</span>
-      {!board && <StatusIcon value={issue.status} />}
-      <strong className="issue-content">{issue.title}</strong>
-      <IssueLabels value={issue.labels} />
-      {!board && <Avatar name={issue.assignee} />}
-    </>
+  const identifier = <span className="identifier">ENG-{issue.number}</span>;
+  const title = <strong className="issue-content">{issue.title}</strong>;
+  const labels = <IssueLabels value={issue.labels} />;
+  const assignee = <Avatar name={issue.assignee} />;
+  const status = editable ? (
+    <span
+      className="issue-status-picker"
+      onMouseDown={(event) => event.stopPropagation()}
+      onTouchStart={(event) => event.stopPropagation()}
+    >
+      <PropertySelect
+        id={`move-${issue.id}`}
+        label={`Change status for ENG-${issue.number}, currently ${issue.status}`}
+        value={issue.status}
+        options={issueStatuses}
+        icon={(value) => <StatusIcon value={value} />}
+        iconOnly={!board}
+        onChange={(status) => {
+          place(issue, { status });
+          requestAnimationFrame(() =>
+            document.getElementById(`move-${issue.id}`)?.focus(),
+          );
+        }}
+      />
+    </span>
+  ) : (
+    <StatusIcon value={issue.status} />
   );
   return (
     <li
@@ -253,7 +272,7 @@ function IssueItem({
       data-issue={issue.id}
       data-dragging={isDragging}
       data-before={insertBefore}
-      className={board ? "board-card" : undefined}
+      className={board ? "board-card" : "row"}
       {...listeners}
       onKeyDown={(event) => {
         if (
@@ -267,39 +286,31 @@ function IssueItem({
         onStep(event.key === "ArrowUp" ? -1 : 1);
       }}
     >
+      {!board && identifier}
+      {!board && status}
       {editable ? (
         <IssueLink
-          className={board ? "card-link" : "row"}
+          className={board ? "card-link" : "row-link"}
           id={issue.id}
           title="Drag to move. Use Alt + Up or Down to reorder."
         >
-          {content}
+          {board && identifier}
+          {title}
+          {board && labels}
         </IssueLink>
       ) : (
-        <div className="row">{content}</div>
+        title
       )}
-      {board && (
+      {board ? (
         <div className="card-properties">
-          <span
-            onMouseDown={(event) => event.stopPropagation()}
-            onTouchStart={(event) => event.stopPropagation()}
-          >
-            <PropertySelect
-              id={`move-${issue.id}`}
-              label={`Move ENG-${issue.number} to status`}
-              value={issue.status}
-              options={issueStatuses}
-              icon={(value) => <StatusIcon value={value} />}
-              onChange={(status) => {
-                place(issue, { status });
-                requestAnimationFrame(() =>
-                  document.getElementById(`move-${issue.id}`)?.focus(),
-                );
-              }}
-            />
-          </span>
-          <Avatar name={issue.assignee} />
+          {status}
+          {assignee}
         </div>
+      ) : (
+        <>
+          {labels}
+          {assignee}
+        </>
       )}
     </li>
   );
