@@ -1,5 +1,5 @@
 /// <reference types="vite/client" />
-import { useEffect, useRef, useState, type FormEvent } from "react";
+import { Fragment, useEffect, useRef, useState, type FormEvent } from "react";
 import {
   ChevronRight,
   Flag,
@@ -23,6 +23,8 @@ import {
 } from "@sync-line/ui";
 import seeds from "../shared/issues.json";
 import { SignIn, SignInForm } from "./SignIn";
+import { emptyFields } from "./versions";
+import { FieldReview } from "./FieldReview";
 import { SignOutButton } from "./SignOutButton";
 import { RequestError } from "./api";
 import { activeAccount, watchSession } from "./session";
@@ -37,14 +39,6 @@ import {
   type Issue,
 } from "./workspace";
 import "./style.css";
-
-const empty: Fields = {
-  title: "",
-  description: "",
-  status: "Todo",
-  assignee: "",
-  priority: "Medium",
-};
 
 function Team() {
   return (
@@ -177,12 +171,12 @@ function Editor({
   setWriteFailed: (failed: boolean) => void;
 }) {
   const draftKey = composerKey(account);
-  const [localDraft, edit] = useState<Fields | undefined>(() =>
+  const [localDraft, edit] = useState<Partial<Fields> | undefined>(() =>
     issue
       ? undefined
-      : (JSON.parse(localStorage.getItem(draftKey) ?? "null") ?? empty),
+      : (JSON.parse(localStorage.getItem(draftKey) ?? "null") ?? emptyFields),
   );
-  const draft = localDraft ?? issue!;
+  const draft: Fields = { ...emptyFields, ...issue, ...localDraft };
   const titleInput = useRef<HTMLInputElement>(null);
   const [createMore, setCreateMore] = useState(false);
   const [requestId, setRequestId] = useState(() => crypto.randomUUID());
@@ -210,10 +204,11 @@ function Editor({
     }
   }
 
-  function persist(fields: Fields) {
+  function persist(updates: Partial<Fields>) {
+    const fields = { ...localDraft, ...updates };
     try {
       if (issue) {
-        saveIssue(account, { ...issue, ...fields });
+        saveIssue(account, issue, fields);
         edit(undefined);
       } else {
         edit(fields);
@@ -229,7 +224,7 @@ function Editor({
   async function submit(event: FormEvent) {
     event.preventDefault();
     if (issue) {
-      persist(draft);
+      persist(localDraft ?? {});
       return;
     }
     if (!draft.title.trim()) {
@@ -245,7 +240,7 @@ function Editor({
       localStorage.removeItem(draftKey);
       setWriteFailed(false);
       if (createMore) {
-        edit(empty);
+        edit(emptyFields);
         setRequestId(crypto.randomUUID());
         setFeedback("");
         requestAnimationFrame(() => titleInput.current?.focus());
@@ -280,39 +275,66 @@ function Editor({
           required
           maxLength={200}
           value={draft.title}
-          onChange={(e) => persist({ ...draft, title: e.target.value })}
+          onChange={(e) => persist({ title: e.target.value })}
         />
+        {issue && (
+          <FieldReview
+            account={account}
+            issue={issue}
+            field="title"
+            disabled={writeFailed}
+          />
+        )}
         <textarea
           aria-label="Description"
           placeholder="Add description…"
           rows={3}
           maxLength={500000}
           value={draft.description}
-          onChange={(e) => persist({ ...draft, description: e.target.value })}
+          onChange={(e) => persist({ description: e.target.value })}
         />
+        {issue && (
+          <FieldReview
+            account={account}
+            issue={issue}
+            field="description"
+            disabled={writeFailed}
+          />
+        )}
         <div className="properties">
           {(["status", "priority", "assignee"] as const).map((key) => (
-            <label className="property" key={key}>
-              {key === "status" ? (
-                <StatusIcon value={draft.status} />
-              ) : key === "priority" ? (
-                <Flag size={14} aria-hidden="true" />
-              ) : (
-                <UserRound size={14} aria-hidden="true" />
+            <Fragment key={key}>
+              <label className="property">
+                {key === "status" ? (
+                  <StatusIcon value={draft.status} />
+                ) : key === "priority" ? (
+                  <Flag size={14} aria-hidden="true" />
+                ) : (
+                  <UserRound size={14} aria-hidden="true" />
+                )}
+                {draft[key] || "Unassigned"}
+                <select
+                  aria-label={key}
+                  value={draft[key]}
+                  onChange={(e) => persist({ [key]: e.target.value })}
+                >
+                  {properties[key].map((value) => (
+                    <option key={value} value={value}>
+                      {value || "Unassigned"}
+                    </option>
+                  ))}
+                </select>
+              </label>
+              {issue && (
+                <FieldReview
+                  account={account}
+                  issue={issue}
+                  field={key}
+                  options={properties[key]}
+                  disabled={writeFailed}
+                />
               )}
-              {draft[key] || "Unassigned"}
-              <select
-                aria-label={key}
-                value={draft[key]}
-                onChange={(e) => persist({ ...draft, [key]: e.target.value })}
-              >
-                {properties[key].map((value) => (
-                  <option key={value} value={value}>
-                    {value || "Unassigned"}
-                  </option>
-                ))}
-              </select>
-            </label>
+            </Fragment>
           ))}
         </div>
         <div className="actions">
@@ -332,7 +354,7 @@ function Editor({
               <button type="button" className="secondary" onClick={copyDraft}>
                 <Copy size={14} aria-hidden="true" /> Copy draft
               </button>
-              <button type="button" onClick={() => persist(draft)}>
+              <button type="button" onClick={() => persist(localDraft ?? {})}>
                 Retry save
               </button>
             </>
