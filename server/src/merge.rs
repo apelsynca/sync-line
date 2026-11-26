@@ -54,7 +54,7 @@ impl Version {
             Field::Description => true,
             Field::Status => ["Todo", "In progress", "Done"].contains(&value),
             Field::Assignee => ["", "Me"].contains(&value),
-            Field::Priority => ["Low", "Medium", "High"].contains(&value),
+            Field::Priority => ["No priority", "Low", "Medium", "High"].contains(&value),
         };
         if !valid
             || value.contains('\0')

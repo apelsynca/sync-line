@@ -6,7 +6,7 @@ export const emptyFields: Fields = {
   description: "",
   status: "Todo",
   assignee: "",
-  priority: "Medium",
+  priority: "No priority",
 };
 
 export const fieldNames = [

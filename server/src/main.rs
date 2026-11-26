@@ -277,7 +277,7 @@ mod tests {
                     (Field::Title, edit("New", b)),
                     (Field::Description, edit("", b)),
                     (Field::Status, edit("Todo", b)),
-                    (Field::Priority, edit("Medium", b)),
+                    (Field::Priority, edit("No priority", b)),
                     (Field::Assignee, edit("", b)),
                 ]
                 .into(),

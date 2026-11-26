@@ -1,4 +1,4 @@
-import { useId, useState } from "react";
+import { useId, useState, type ReactNode } from "react";
 import { History } from "lucide-react";
 import { Modal, PropertySelect } from "@sync-line/ui";
 import { saveIssue, type Issue } from "./workspace";
@@ -9,12 +9,14 @@ export function FieldReview({
   issue,
   field,
   options,
+  icon,
   disabled,
 }: {
   account: string;
   issue: Issue;
   field: Field;
   options?: string[];
+  icon?: (value: string) => ReactNode;
   disabled: boolean;
 }) {
   const [review, setReview] = useState<Version[]>();
@@ -86,6 +88,7 @@ export function FieldReview({
               label="Value to save"
               value={value}
               options={options}
+              icon={icon}
               onChange={setValue}
             />
           ) : (

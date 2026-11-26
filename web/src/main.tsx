@@ -6,10 +6,13 @@ import {
   ListTodo,
   LogIn,
   Copy,
+  Ellipsis,
   Maximize2,
   Minimize2,
   Plus,
-  Signal,
+  SignalLow,
+  SignalMedium,
+  SignalHigh,
   UserRound,
   X,
 } from "lucide-react";
@@ -156,15 +159,25 @@ function Home() {
   );
 }
 
+const priorityIcons = new Map([
+  ["No priority", Ellipsis],
+  ["Low", SignalLow],
+  ["Medium", SignalMedium],
+  ["High", SignalHigh],
+]);
+
 const properties = {
   status: ["Todo", "In progress", "Done"],
   assignee: ["", "Me"],
-  priority: ["Low", "Medium", "High"],
+  priority: [...priorityIcons.keys()],
 };
 
 const propertyIcons = {
   status: (value: string) => <StatusIcon value={value} />,
-  priority: () => <Signal size={15} aria-hidden="true" />,
+  priority: (value: string) => {
+    const Icon = priorityIcons.get(value) ?? Ellipsis;
+    return <Icon size={15} aria-hidden="true" />;
+  },
   assignee: () => <UserRound size={15} aria-hidden="true" />,
 };
 
@@ -344,6 +357,7 @@ function Editor({
                   issue={issue}
                   field={key}
                   options={properties[key]}
+                  icon={propertyIcons[key]}
                   disabled={writeFailed}
                 />
               )}
