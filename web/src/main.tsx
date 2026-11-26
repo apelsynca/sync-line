@@ -215,7 +215,7 @@ function IssueList({
                   <>
                     <span className="identifier">ENG-{issue.number}</span>
                     <StatusIcon value={status} />
-                    <strong>{issue.title}</strong>
+                    <strong className="issue-content">{issue.title}</strong>
                     <Avatar name={issue.assignee} />
                   </>
                 );
@@ -224,7 +224,21 @@ function IssueList({
                     {preview ? (
                       <div className="row">{content}</div>
                     ) : (
-                      <a className="row" href={issuePath(issue.id)}>
+                      <a
+                        className="row"
+                        href={issuePath(issue.id)}
+                        draggable={false}
+                        onClick={(event) => {
+                          const selection = window.getSelection();
+                          if (
+                            event.detail > 0 &&
+                            selection &&
+                            !selection.isCollapsed &&
+                            event.currentTarget.contains(selection.anchorNode)
+                          )
+                            event.preventDefault();
+                        }}
+                      >
                         {content}
                       </a>
                     )}
@@ -439,7 +453,7 @@ function Editor({
           </div>
         </div>
         <input
-          className="issue-title"
+          className="issue-title issue-content"
           ref={titleInput}
           aria-label="Issue title"
           placeholder="Issue title"
@@ -457,6 +471,7 @@ function Editor({
           />
         )}
         <textarea
+          className="issue-content"
           aria-label="Description"
           placeholder="Add description…"
           rows={3}
@@ -781,4 +796,22 @@ function App() {
   );
 }
 
-createRoot(document.getElementById("root")!).render(<App />);
+const root = document.getElementById("root")!;
+// Native text inputs can select their value even when CSS disables selection.
+root.addEventListener("select", (event) => {
+  const input = event.target;
+  if (
+    !(input instanceof HTMLInputElement) ||
+    input !== document.activeElement ||
+    input.classList.contains("issue-content")
+  )
+    return;
+  if (input.selectionEnd !== null) {
+    if (input.selectionStart !== input.selectionEnd)
+      input.setSelectionRange(input.selectionEnd, input.selectionEnd);
+  } else {
+    const selection = window.getSelection();
+    if (selection?.rangeCount && selection.toString()) selection.collapseToEnd();
+  }
+});
+createRoot(root).render(<App />);

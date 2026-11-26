@@ -23,6 +23,8 @@ export function FieldReview({
   const [value, setValue] = useState("");
   const [error, setError] = useState("");
   const inputId = useId();
+  const contentClass =
+    field === "title" || field === "description" ? "issue-content" : undefined;
   const heads = issue.versions?.[field] ?? [];
   if (!review && !heads.some((head) => head.value !== heads[0].value))
     return null;
@@ -65,13 +67,13 @@ export function FieldReview({
         >
           <h2 id="review-title">Review {field}</h2>
           <h3>Current value</h3>
-          <p>{display(review[0].value)}</p>
+          <p className={contentClass}>{display(review[0].value)}</p>
           {[...new Set(review.map((head) => head.value))]
             .slice(1)
             .map((previous) => (
               <div key={previous}>
                 <h3>Previous value</h3>
-                <p>{display(previous)}</p>
+                <p className={contentClass}>{display(previous)}</p>
                 <button
                   type="button"
                   className="secondary"
@@ -93,6 +95,7 @@ export function FieldReview({
             />
           ) : (
             <textarea
+              className={contentClass}
               id={inputId}
               rows={field === "title" ? 2 : 4}
               value={value}
