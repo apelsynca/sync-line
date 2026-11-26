@@ -30,6 +30,7 @@ import {
 import seeds from "../shared/demo-v1.json";
 import { SignIn, SignInForm } from "./SignIn";
 import { emptyFields } from "./versions";
+import { SavedViews, type IssueFilters } from "./SavedViews";
 import { FieldReview } from "./FieldReview";
 import { SignOutButton } from "./SignOutButton";
 import { RequestError } from "./api";
@@ -59,20 +60,30 @@ const anyStatus = "Any status";
 const anyPriority = "Any priority";
 
 function IssueList({
+  account,
   issues,
   onCreate,
 }: {
+  account?: string;
   issues: Issue[];
   onCreate?: () => void;
 }) {
   const preview = !onCreate;
-  const [view, setView] = useState<"active" | "all" | "mine">("all");
-  const [query, setQuery] = useState("");
-  const [statusFilter, setStatusFilter] = useState(anyStatus);
-  const [priorityFilter, setPriorityFilter] = useState(anyPriority);
+  const [filters, setFilters] = useState<IssueFilters>({
+    view: "all",
+    query: "",
+    statusFilter: anyStatus,
+    priorityFilter: anyPriority,
+  });
+  const { view, query, statusFilter, priorityFilter } = filters;
+  function updateFilters(changes: Partial<IssueFilters>) {
+    setFilters((current) => ({ ...current, ...changes }));
+  }
   const term = query.trim().toLowerCase();
   const filtered =
-    Boolean(term) || statusFilter !== anyStatus || priorityFilter !== anyPriority;
+    Boolean(term) ||
+    statusFilter !== anyStatus ||
+    priorityFilter !== anyPriority;
   const hideEmptyGroups = filtered || view === "mine";
   const statuses = properties.status.filter(
     (status) => view !== "active" || status !== "Done",
@@ -114,39 +125,54 @@ function IssueList({
         <button
           aria-pressed={view === "active"}
           onClick={() => {
-            setView("active");
-            if (statusFilter === "Done") setStatusFilter(anyStatus);
+            updateFilters({
+              view: "active",
+              statusFilter: statusFilter === "Done" ? anyStatus : statusFilter,
+            });
           }}
         >
           Active
         </button>
-        <button aria-pressed={view === "all"} onClick={() => setView("all")}>
+        <button
+          aria-pressed={view === "all"}
+          onClick={() => updateFilters({ view: "all" })}
+        >
           All issues
         </button>
         {!preview && (
           <>
-            <button aria-pressed={view === "mine"} onClick={() => setView("mine")}>
+            <button
+              aria-pressed={view === "mine"}
+              onClick={() => updateFilters({ view: "mine" })}
+            >
               My issues
             </button>
             <PropertySelect
               label="Filter by status"
               value={statusFilter}
               options={[anyStatus, ...statuses]}
-              onChange={setStatusFilter}
+              onChange={(statusFilter) => updateFilters({ statusFilter })}
             />
             <PropertySelect
               label="Filter by priority"
               value={priorityFilter}
               options={[anyPriority, ...properties.priority]}
-              onChange={setPriorityFilter}
+              onChange={(priorityFilter) => updateFilters({ priorityFilter })}
             />
+            {account && (
+              <SavedViews
+                account={account}
+                filters={filters}
+                onApply={setFilters}
+              />
+            )}
             <input
               className="issue-search"
               type="search"
               aria-label="Search issues by number, title, or description"
               placeholder="Search issues…"
               value={query}
-              onChange={(event) => setQuery(event.target.value)}
+              onChange={(event) => updateFilters({ query: event.target.value })}
             />
           </>
         )}
@@ -610,7 +636,11 @@ function Workspace({
         )}
         {path === "/app" || path === newIssuePath ? (
           issues.length ? (
-            <IssueList issues={issues} onCreate={openComposer} />
+            <IssueList
+              account={account}
+              issues={issues}
+              onCreate={openComposer}
+            />
           ) : (
             <section className="empty">
               <h1>Your issues</h1>

@@ -323,14 +323,14 @@ a.row:hover {
   margin: 1.25rem 1rem;
   color: var(--muted);
 }
-.list-filters button {
+.list-filters > button {
   background: var(--panel);
   border: 1px solid var(--line);
   color: var(--muted);
   font-size: 0.82rem;
   padding: 0.3rem 0.7rem;
 }
-.list-filters button[aria-pressed="true"] {
+.list-filters > button[aria-pressed="true"] {
   background: var(--accent);
   color: var(--canvas);
 }
@@ -354,7 +354,8 @@ a.row:hover {
   font-size: 1.4rem;
   margin: 0 0 1rem;
 }
-.auth input {
+.auth input,
+.saved-views input {
   display: block;
   width: 100%;
   padding: 0.55rem;
@@ -437,4 +438,28 @@ a.row:hover {
 .field-review .property {
   display: flex;
   justify-content: space-between;
+}
+
+.saved-views p {
+  color: var(--muted);
+}
+.saved-views ul {
+  max-height: 35dvh;
+  overflow: auto;
+  margin-block: 1rem;
+}
+.saved-views li {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  margin-block: 0.3rem;
+}
+.saved-views li .secondary {
+  flex: 1;
+  min-width: 0;
+  overflow-wrap: anywhere;
+  text-align: start;
+}
+.saved-views li .editor-tool {
+  flex: none;
 }
