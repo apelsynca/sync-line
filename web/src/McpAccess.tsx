@@ -1,5 +1,5 @@
-import { useEffect, useState } from "react";
-import { Plug } from "lucide-react";
+import { useEffect, useId, useRef, useState } from "react";
+import { Copy, Plug } from "lucide-react";
 import { Modal } from "@sync-line/ui";
 import { request } from "./api";
 
@@ -22,6 +22,43 @@ export function McpAccess({ account }: { account: string }) {
         />
       )}
     </>
+  );
+}
+
+function CopyField({ label, value }: { label: string; value: string }) {
+  const id = useId();
+  const input = useRef<HTMLInputElement>(null);
+  const [feedback, setFeedback] = useState("");
+
+  async function copy() {
+    try {
+      await navigator.clipboard.writeText(value);
+      setFeedback(`${label} copied.`);
+    } catch {
+      input.current?.focus();
+      input.current?.select();
+      setFeedback(`${label} selected. Use your device’s Copy command to copy manually.`);
+    }
+  }
+
+  return (
+    <div className="mcp-copy-field">
+      <label htmlFor={id}>{label}</label>
+      <div className="mcp-copy-row">
+        <input
+          id={id}
+          ref={input}
+          value={value}
+          readOnly
+          spellCheck={false}
+          onFocus={(event) => event.currentTarget.select()}
+        />
+        <button className="secondary" type="button" aria-label={`Copy ${label}`} onClick={copy}>
+          <Copy size={14} aria-hidden="true" /> Copy
+        </button>
+      </div>
+      <small role="status">{feedback}</small>
+    </div>
   );
 }
 
@@ -88,24 +125,11 @@ function AccessDialog({
         Connect an MCP client to search, read, create, update, and delete issues in this
         workspace.
       </p>
-      <label>
-        Server URL
-        <input
-          readOnly
-          value={location.origin + "/api/mcp"}
-          onFocus={(e) => e.target.select()}
-        />
-      </label>
-      {token && (
-        <label>
-          Bearer token · copy before closing
-          <input
-            readOnly
-            value={token}
-            onFocus={(e) => e.target.select()}
-            spellCheck={false}
-          />
-        </label>
+      <CopyField label="Server URL" value={location.origin + "/api/mcp"} />
+      {token && <CopyField label="Bearer token" value={token} />}
+      {token && <p>Copy the token before closing. It’s shown only once.</p>}
+      {active && !token && (
+        <p>A token is active. If you lost it, revoke it and create a new one.</p>
       )}
       {active && <p>Revoking this token disconnects every client using it.</p>}
       {active === null && !error && <p role="status">Checking access…</p>}

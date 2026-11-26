@@ -583,14 +583,41 @@ aside .session-action {
   font-size: 1.2rem;
   margin: 0;
 }
-.mcp-access label {
-  display: grid;
-  gap: 0.3rem;
+.mcp-copy-field {
   margin-block: 1rem;
 }
-.mcp-access input {
-  width: 100%;
+.mcp-copy-field label {
+  display: block;
+  margin-bottom: 0.35rem;
+  font-weight: 600;
+}
+.mcp-copy-row {
+  display: flex;
+  gap: 0.4rem;
+}
+.mcp-copy-row input {
+  flex: 1;
   min-width: 0;
+  padding: 0.6rem;
+  border: 1px solid var(--line);
+  border-radius: 6px;
+  background: var(--surface);
+  color: var(--ink);
+  font-family: ui-monospace, monospace;
+  -webkit-user-select: text;
+  user-select: text;
+}
+.mcp-copy-row button {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+}
+.mcp-copy-field small {
+  display: block;
+  color: var(--muted);
+}
+.mcp-copy-field small:not(:empty) {
+  margin-top: 0.35rem;
 }
 .session-dialog::backdrop {
   background: rgb(0 0 0 / 55%);

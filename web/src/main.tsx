@@ -850,7 +850,7 @@ root.addEventListener("select", (event) => {
 	if (
 		!(input instanceof HTMLInputElement) ||
 		input !== document.activeElement ||
-		input.classList.contains("issue-content")
+		getComputedStyle(input).userSelect === "text"
 	)
 		return;
 	if (input.selectionEnd !== null) {
