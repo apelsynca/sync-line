@@ -100,6 +100,7 @@ button:disabled {
   border-radius: 20px;
 }
 .composer {
+  font-size: 0.9rem;
   position: fixed;
   inset: min(13vh, 9rem) 0 auto;
   margin: 0 auto;

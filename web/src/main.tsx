@@ -57,11 +57,12 @@ function Team() {
 
 function IssueList({
   issues,
-  preview = false,
+  onCreate,
 }: {
   issues: Issue[];
-  preview?: boolean;
+  onCreate?: () => void;
 }) {
+  const preview = !onCreate;
   const [activeOnly, setActiveOnly] = useState(false);
   return (
     <section
@@ -72,10 +73,17 @@ function IssueList({
         <Team />
         <ChevronRight size={14} aria-hidden="true" />
         <h2>Issues</h2>
-        {!preview && (
-          <a className="new-link" href="/app/issues/new">
+        {onCreate && (
+          <button
+            className="new-link"
+            type="button"
+            onClick={onCreate}
+            aria-haspopup="dialog"
+            aria-keyshortcuts="c"
+            title="New issue (C)"
+          >
             <Plus aria-hidden="true" size={16} /> New issue
-          </a>
+          </button>
         )}
       </div>
       <div className="list-filters" role="group" aria-label="Issue view">
@@ -147,7 +155,6 @@ function Home() {
       </div>
       <div className="preview">
         <IssueList
-          preview
           issues={seeds.map((fields, index) => ({
             ...fields,
             id: String(index),
@@ -186,12 +193,14 @@ function Editor({
   issue,
   writeFailed,
   setWriteFailed,
+  onDismiss,
 }: {
   account: string;
-  issue?: Issue;
   writeFailed: boolean;
   setWriteFailed: (failed: boolean) => void;
-}) {
+} & (
+  { issue: Issue; onDismiss?: never } | { issue?: never; onDismiss: () => void }
+)) {
   const draftKey = composerKey(account);
   const [localDraft, edit] = useState<Partial<Fields> | undefined>(() =>
     issue
@@ -271,7 +280,7 @@ function Editor({
         setFeedback("");
         requestAnimationFrame(() => titleInput.current?.focus());
       } else {
-        location.replace(issuePath(requestId));
+        onDismiss();
       }
     } catch {
       reportWriteFailure();
@@ -287,7 +296,7 @@ function Editor({
             <Layers size={14} aria-hidden="true" /> ENG
           </span>
           <ChevronRight size={14} aria-hidden="true" />
-          <h1 id="editor-title">
+          <h1 id={issue ? undefined : "editor-title"}>
             {issue ? "ENG-" + issue.number : "New issue"}
           </h1>
           <div className="editor-tools">
@@ -295,16 +304,33 @@ function Editor({
               <button
                 type="button"
                 className="editor-tool"
-                aria-label={expanded ? "Restore composer size" : "Expand composer"}
+                aria-label={
+                  expanded ? "Restore composer size" : "Expand composer"
+                }
                 title={expanded ? "Restore composer size" : "Expand composer"}
                 onClick={() => setExpanded(!expanded)}
               >
                 {expanded ? <Minimize2 size={15} /> : <Maximize2 size={15} />}
               </button>
             )}
-            <a className="editor-tool" href="/app" aria-label="Back to team issues">
-              <X size={17} aria-hidden="true" />
-            </a>
+            {issue ? (
+              <a
+                className="editor-tool"
+                href="/app"
+                aria-label="Back to team issues"
+              >
+                <X size={17} aria-hidden="true" />
+              </a>
+            ) : (
+              <button
+                type="button"
+                className="editor-tool"
+                onClick={onDismiss}
+                aria-label="Close new issue"
+              >
+                <X size={17} aria-hidden="true" />
+              </button>
+            )}
           </div>
         </div>
         <input
@@ -397,16 +423,27 @@ function Editor({
   return issue ? (
     form
   ) : (
-    <ComposerDialog expanded={expanded} onDismiss={() => location.assign("/app")}>
+    <ComposerDialog expanded={expanded} onDismiss={onDismiss}>
       {form}
     </ComposerDialog>
   );
 }
 
-function Workspace({ account }: { account: string }) {
+function Workspace({
+  account,
+  composing,
+  openComposer,
+  closeComposer,
+}: {
+  account: string;
+  composing: boolean;
+  openComposer: () => void;
+  closeComposer: () => void;
+}) {
   const [issues, setIssues] = useState(() => readIssues(account));
   const [expired, setExpired] = useState(false);
   const [writeFailed, setWriteFailed] = useState(false);
+  const [composerWriteFailed, setComposerWriteFailed] = useState(false);
   const [signingIn, setSigningIn] = useState(false);
   useEffect(() => {
     let running = false;
@@ -465,7 +502,7 @@ function Workspace({ account }: { account: string }) {
   }, [account]);
   const path = location.pathname;
   const selected = issues.find((issue) => issuePath(issue.id) === path);
-  return (
+  const workspace = (
     <div className="workspace">
       <aside>
         <Brand />
@@ -476,7 +513,10 @@ function Workspace({ account }: { account: string }) {
             <ListTodo size={16} aria-hidden="true" /> Issues
           </a>
         </nav>
-        <SignOutButton account={account} writeFailed={writeFailed} />
+        <SignOutButton
+          account={account}
+          writeFailed={writeFailed || composerWriteFailed}
+        />
       </aside>
       <main>
         {expired && (
@@ -505,26 +545,22 @@ function Workspace({ account }: { account: string }) {
             />
           </Modal>
         )}
-        {path === "/app" || path === "/app/issues/new" ? (
-          <>
-            {issues.length ? (
-              <IssueList issues={issues} />
-            ) : (
-              <section className="empty">
-                <h1>Your issues</h1>
-                <ButtonLink href="/app/issues/new">
-                  <Plus size={16} aria-hidden="true" /> Create your first issue
-                </ButtonLink>
-              </section>
-            )}
-            {path === "/app/issues/new" && (
-              <Editor
-                writeFailed={writeFailed}
-                setWriteFailed={setWriteFailed}
-                account={account}
-              />
-            )}
-          </>
+        {path === "/app" || path === newIssuePath ? (
+          issues.length ? (
+            <IssueList issues={issues} onCreate={openComposer} />
+          ) : (
+            <section className="empty">
+              <h1>Your issues</h1>
+              <button
+                type="button"
+                onClick={openComposer}
+                aria-haspopup="dialog"
+                aria-keyshortcuts="c"
+              >
+                <Plus size={16} aria-hidden="true" /> Create your first issue
+              </button>
+            </section>
+          )
         ) : selected ? (
           <Editor
             writeFailed={writeFailed}
@@ -541,6 +577,19 @@ function Workspace({ account }: { account: string }) {
       </main>
     </div>
   );
+  return (
+    <>
+      {path === "/" ? <Home /> : workspace}
+      {composing && (
+        <Editor
+          account={account}
+          writeFailed={composerWriteFailed}
+          setWriteFailed={setComposerWriteFailed}
+          onDismiss={closeComposer}
+        />
+      )}
+    </>
+  );
 }
 
 if (import.meta.env.PROD && "serviceWorker" in navigator) {
@@ -550,12 +599,67 @@ if (import.meta.env.PROD && "serviceWorker" in navigator) {
 const account = activeAccount();
 watchSession(account);
 
-createRoot(document.getElementById("root")!).render(
-  location.pathname === "/" ? (
+const newIssuePath = "/app/issues/new";
+
+function App() {
+  const [composing, setComposing] = useState(
+    location.pathname === newIssuePath,
+  );
+  const requiresSignIn = new URLSearchParams(location.search).has("signin");
+  useEffect(() => {
+    function onKeyDown(event: KeyboardEvent) {
+      if (
+        event.key !== "c" ||
+        event.defaultPrevented ||
+        event.repeat ||
+        event.isComposing ||
+        event.ctrlKey ||
+        event.metaKey ||
+        event.altKey ||
+        event.shiftKey
+      )
+        return;
+      const target = event.target;
+      if (
+        target instanceof HTMLElement &&
+        (target.isContentEditable ||
+          target.closest(
+            "input, textarea, select, [role='combobox'], [role='textbox']",
+          ))
+      )
+        return;
+      if (document.querySelector("dialog[open], [role='listbox']")) return;
+      event.preventDefault();
+      if (account && !requiresSignIn) setComposing(true);
+      else if (location.pathname !== newIssuePath) {
+        location.assign(newIssuePath + (requiresSignIn ? "?signin" : ""));
+      }
+    }
+    window.addEventListener("keydown", onKeyDown);
+    return () => window.removeEventListener("keydown", onKeyDown);
+  }, [requiresSignIn]);
+
+  function closeComposer() {
+    if (location.pathname === newIssuePath)
+      history.replaceState(null, "", "/app");
+    setComposing(false);
+  }
+
+  if (account && !requiresSignIn) {
+    return (
+      <Workspace
+        account={account}
+        composing={composing}
+        openComposer={() => setComposing(true)}
+        closeComposer={closeComposer}
+      />
+    );
+  }
+  return location.pathname === "/" ? (
     <Home />
-  ) : account && !new URLSearchParams(location.search).has("signin") ? (
-    <Workspace account={account} />
   ) : (
     <SignIn expectedWorkspace={account ?? undefined} />
-  ),
-);
+  );
+}
+
+createRoot(document.getElementById("root")!).render(<App />);
