@@ -10,6 +10,7 @@
   },
   "dependencies": {
     "@dnd-kit/core": "^6.3.1",
+    "@radix-ui/react-context-menu": "^2.4.1",
     "@sync-line/ui": "*",
     "fractional-indexing": "^4.0.0",
     "lucide-react": "^1.80.0",

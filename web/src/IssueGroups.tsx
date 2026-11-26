@@ -16,6 +16,7 @@ import { ChevronRight } from "lucide-react";
 import { issueStatuses } from "./issueViews";
 import { compareIssues, positionBetween } from "./issueOrder";
 import { saveIssue, type Issue } from "./workspace";
+import { IssueActions } from "./IssueActions";
 import { IssueLink } from "./IssueLink";
 import { IssueLabels } from "./IssueLabels";
 
@@ -134,7 +135,8 @@ export function IssueGroups({
               status={status}
               rows={rows}
               board={board}
-              editable={!!account}
+              account={account}
+              onError={setError}
               place={place}
             />
           );
@@ -156,18 +158,20 @@ function IssueGroup({
   status,
   rows,
   board,
-  editable,
+  account,
+  onError,
   place,
 }: {
   status: string;
   rows: Issue[];
   board: boolean;
-  editable: boolean;
+  account?: string;
+  onError: (message: string) => void;
   place: Place;
 }) {
   const { setNodeRef, isOver } = useDroppable({
     id: status,
-    disabled: !editable,
+    disabled: !account,
   });
   const { collisions } = useDndContext();
   const before = collisions?.[0]?.data?.before;
@@ -184,7 +188,10 @@ function IssueGroup({
           key={issue.id}
           issue={issue}
           board={board}
-          editable={editable}
+          account={account}
+          onError={onError}
+          first={index === 0}
+          last={index === rows.length - 1}
           insertBefore={isOver && before === issue.id}
           place={place}
           onStep={(direction) => {
@@ -222,27 +229,33 @@ function IssueGroup({
 function IssueItem({
   issue,
   board,
-  editable,
+  account,
+  onError,
+  first,
+  last,
   insertBefore,
   place,
   onStep,
 }: {
   issue: Issue;
   board: boolean;
-  editable: boolean;
+  account?: string;
+  onError: (message: string) => void;
+  first: boolean;
+  last: boolean;
   insertBefore: boolean;
   place: Place;
   onStep: (direction: -1 | 1) => void;
 }) {
   const { setNodeRef, listeners, isDragging } = useDraggable({
     id: issue.id,
-    disabled: !editable,
+    disabled: !account,
   });
   const identifier = <span className="identifier">ENG-{issue.number}</span>;
   const title = <strong className="issue-content">{issue.title}</strong>;
   const labels = <IssueLabels value={issue.labels} />;
   const assignee = <Avatar name={issue.assignee} />;
-  const status = editable ? (
+  const status = account ? (
     <span
       className="issue-status-picker"
       onMouseDown={(event) => event.stopPropagation()}
@@ -266,7 +279,7 @@ function IssueItem({
   ) : (
     <StatusIcon value={issue.status} />
   );
-  return (
+  const row = (
     <li
       ref={setNodeRef}
       data-issue={issue.id}
@@ -276,7 +289,7 @@ function IssueItem({
       {...listeners}
       onKeyDown={(event) => {
         if (
-          !editable ||
+          !account ||
           !(event.target instanceof HTMLAnchorElement) ||
           !event.altKey
         )
@@ -288,11 +301,11 @@ function IssueItem({
     >
       {!board && identifier}
       {!board && status}
-      {editable ? (
+      {account ? (
         <IssueLink
           className={board ? "card-link" : "row-link"}
           id={issue.id}
-          title="Drag to move. Use Alt + Up or Down to reorder."
+          title="Drag to move. Use Alt + Up or Down to reorder, or Shift + F10 for quick actions."
         >
           {board && identifier}
           {title}
@@ -314,4 +327,12 @@ function IssueItem({
       )}
     </li>
   );
+  return account ? (
+    <IssueActions account={account} issue={issue} dragging={isDragging} onError={onError}
+      onStatus={status => place(issue, { status })}
+      moveUp={first ? undefined : () => onStep(-1)}
+      moveDown={last ? undefined : () => onStep(1)}>
+      {row}
+    </IssueActions>
+  ) : row;
 }

@@ -16,7 +16,8 @@ export function IssueLink({
     <a
       className={className}
       title={title}
-      aria-keyshortcuts="Alt+ArrowUp Alt+ArrowDown"
+      aria-haspopup="menu"
+      aria-keyshortcuts="Alt+ArrowUp Alt+ArrowDown Shift+F10 ContextMenu"
       href={issuePath(id)}
       draggable={false}
       onClick={(event) => {

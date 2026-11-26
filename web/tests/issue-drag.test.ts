@@ -107,3 +107,38 @@ test("dragging an issue title moves and reorders it in Board and list views", as
   expect(await page.getByLabel("Issue title").inputValue()).toBe("First");
   await page.close();
 });
+
+test("issue quick actions update the selected row and preserve keyboard deletion confirmation", async () => {
+  const page = await openWorkspace("app?view=board");
+  const link = page.getByRole("link", { name: /Second/ });
+  const action = (name: string) => page.getByRole("menuitem", { name, exact: true });
+  await link.click({ button: "right" });
+  await action("Change priority").hover();
+  await page.getByRole("menuitemradio", { name: "High" }).click();
+  await link.press("Shift+F10");
+  await action("Move up").click();
+  const todo = page.getByRole("region", { name: "Todo", exact: true });
+  expect(await todo.locator("strong").allTextContents()).toEqual(["Second", "First", "Third"]);
+  await link.press("Shift+F10");
+  await action("Change status").focus();
+  await page.keyboard.press("ArrowRight");
+  await page.getByRole("menuitemradio", { name: "Done" }).press("Enter");
+  await page.getByRole("region", { name: "Done", exact: true }).getByRole("link", { name: /Second/ }).waitFor();
+  await page.reload();
+  await link.click({ button: "right" });
+  await action("Change priority").hover();
+  expect(await page.getByRole("menuitemradio", { name: "High" }).getAttribute("aria-checked")).toBe("true");
+  await action("Delete issue…").click();
+  const dialog = page.getByRole("dialog", { name: "Delete ENG-2?" });
+  const cancel = dialog.getByRole("button", { name: "Cancel" });
+  expect(await cancel.evaluate(el => el === document.activeElement)).toBe(true);
+  await cancel.press("Escape");
+  await page.waitForFunction(() => document.activeElement?.textContent?.includes("Second") && document.activeElement.tagName === "A");
+  await page.keyboard.press("ContextMenu");
+  await action("Delete issue…").press("Enter");
+  await cancel.press("Tab");
+  await page.keyboard.press("Enter");
+  await link.waitFor({ state: "detached" });
+  expect(await todo.locator("strong").allTextContents()).toEqual(["First", "Third"]);
+  await page.close();
+});

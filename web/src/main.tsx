@@ -20,9 +20,6 @@ import {
 	MousePointer2,
 	Plus,
 	Sun,
-	SignalHigh,
-	SignalLow,
-	SignalMedium,
 	Tag,
 	Trash2,
 	UserRound,
@@ -37,6 +34,8 @@ import { Agent } from "./Agent";
 import { CommandMenu } from "./CommandMenu";
 import { FieldReview } from "./FieldReview";
 import { IssueComments } from "./IssueComments";
+import { DeleteIssueDialog } from "./DeleteIssueDialog";
+import { priorityIcons } from "./issuePriority";
 import { IssueGroups } from "./IssueGroups";
 import { IssueLabelFilter, labelsMaxLength, matchesLabel } from "./IssueLabels";
 import {
@@ -313,13 +312,6 @@ function Home() {
 		</main>
 	);
 }
-
-const priorityIcons = new Map([
-	["No priority", Ellipsis],
-	["Low", SignalLow],
-	["Medium", SignalMedium],
-	["High", SignalHigh],
-]);
 
 const properties = {
 	status: issueStatuses,
@@ -620,22 +612,15 @@ function Editor({
 			{form}
 			<IssueComments key={issue.id} account={account} issue={issue} />
 			{confirmDelete && (
-				<Modal labelledBy="delete-issue-title" className="session-dialog delete-dialog" onDismiss={dismissDelete}>
-					<h2 id="delete-issue-title">Delete ENG-{issue.number}?</h2>
-					<p>{draft.title.trim() ? `“${draft.title}”` : "This issue"} will be permanently deleted.</p>
-					<div className="actions">
-						<button type="button" className="secondary" autoFocus onClick={dismissDelete}>Cancel</button>
-						<button type="button" className="delete-confirm" onClick={() => {
-							try {
-								deleteIssue(account, issue.id);
-								location.replace("/app");
-							} catch {
-								setConfirmDelete(false);
-								setFeedback("Couldn't save the deletion on this device. Try again.");
-							}
-						}}>Delete issue</button>
-					</div>
-				</Modal>
+				<DeleteIssueDialog issue={issue} title={draft.title} onDismiss={dismissDelete} onConfirm={() => {
+					try {
+						deleteIssue(account, issue.id);
+						location.replace("/app");
+					} catch {
+						setConfirmDelete(false);
+						setFeedback("Couldn't save the deletion on this device. Try again.");
+					}
+				}} />
 			)}
 		</>
 	) : (
