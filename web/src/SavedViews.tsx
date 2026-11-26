@@ -8,6 +8,7 @@ export type IssueFilters = {
   query: string;
   statusFilter: string;
   priorityFilter: string;
+  assigneeFilter?: string;
 };
 
 type SavedView = { name: string; filters: IssueFilters };

@@ -73,6 +73,7 @@ function Team() {
 
 const anyStatus = "Any status";
 const anyPriority = "Any priority";
+const anyAssignee = "Any assignee";
 
 function IssueList({
 	account,
@@ -92,7 +93,14 @@ function IssueList({
 			priorityFilter: anyPriority,
 		};
 	});
-	const { view, query, statusFilter, priorityFilter } = filters;
+  const {
+    view,
+    query,
+    statusFilter,
+    priorityFilter,
+    assigneeFilter = anyAssignee,
+  } = filters;
+  const assignee = view === "mine" ? "Me" : assigneeFilter;
 	useEffect(() => {
 		if (!account || location.pathname !== "/app") return;
 		const url = new URL(location.href);
@@ -110,7 +118,8 @@ function IssueList({
 	const filtered =
 		Boolean(term) ||
 		statusFilter !== anyStatus ||
-		priorityFilter !== anyPriority;
+    priorityFilter !== anyPriority ||
+    assigneeFilter !== anyAssignee;
 	const hideEmptyGroups = filtered || view === "mine" || view === "backlog";
 	const statuses = issueViews[view].statuses.filter(
 		(status) => !preview || status !== "Backlog",
@@ -121,7 +130,7 @@ function IssueList({
 	const visibleIssues = issues.filter(
 		(issue) =>
 			statuses.includes(issue.status) &&
-			(view !== "mine" || issue.assignee === "Me") &&
+      (assignee === anyAssignee || issue.assignee === assignee) &&
 			(statusFilter === anyStatus || issue.status === statusFilter) &&
 			(priorityFilter === anyPriority || issue.priority === priorityFilter) &&
 			(!term ||
@@ -160,6 +169,7 @@ function IssueList({
 						onClick={() =>
 							updateFilters({
 								view: next,
+                assigneeFilter: next === "mine" ? anyAssignee : assigneeFilter,
 								statusFilter:
 									next !== "backlog" &&
 									issueViews[next].statuses.includes(statusFilter)
@@ -187,6 +197,15 @@ function IssueList({
 							options={[anyPriority, ...properties.priority]}
 							onChange={(priorityFilter) => updateFilters({ priorityFilter })}
 						/>
+            {view !== "mine" && (
+              <PropertySelect
+                label="Filter by assignee"
+                value={assigneeFilter}
+                options={[anyAssignee, ...properties.assignee]}
+                icon={propertyIcons.assignee}
+                onChange={(assigneeFilter) => updateFilters({ assigneeFilter })}
+              />
+            )}
 						{account && (
 							<SavedViews
 								account={account}
