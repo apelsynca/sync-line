@@ -40,6 +40,18 @@ async function openWorkspace(path: string) {
   return page;
 }
 
+test("Tab and Shift+Tab leave focus in the clicked field", async () => {
+  const page = await openWorkspace("app");
+  const search = page.getByRole("searchbox");
+  await search.click();
+  for (const key of ["Tab", "Shift+Tab"]) {
+    await page.keyboard.press(key);
+    expect(await search.evaluate((field) => field === document.activeElement)).toBe(true);
+  }
+  expect(await search.evaluate((field) => getComputedStyle(field).boxShadow)).toBe("none");
+  await page.close();
+});
+
 test("the list status icon moves an issue without opening it", async () => {
   const page = await openWorkspace("app?view=active");
   const row = page.getByRole("listitem").filter({ hasText: "First" });

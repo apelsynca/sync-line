@@ -377,9 +377,6 @@ nav p {
   color: var(--ink);
   font-size: 0.85rem;
 }
-.issue-search:focus-visible {
-  background: var(--control);
-}
 .search-empty {
   margin: 1.25rem 1rem;
   color: var(--muted);

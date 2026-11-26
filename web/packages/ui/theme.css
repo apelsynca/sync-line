@@ -31,16 +31,8 @@ textarea {
 textarea {
   resize: none;
 }
-@media (forced-colors: none) {
-  :focus-visible {
-    outline: none;
-  }
-  :is(a, button, input, textarea, summary):where(:not(.property-icon-only)):focus-visible {
-    box-shadow: inset 0 -2px currentColor;
-  }
-  .property-icon-only:focus-visible .status-icon {
-    stroke-width: 3;
-  }
+:focus-visible {
+  outline: none;
 }
 .brand,
 .status,

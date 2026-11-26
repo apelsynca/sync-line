@@ -767,6 +767,10 @@ function App() {
 	const requiresSignIn = new URLSearchParams(location.search).has("signin");
 	useEffect(() => {
 		function onKeyDown(event: KeyboardEvent) {
+			if (event.key === "Tab" && !event.ctrlKey && !event.metaKey && !event.altKey) {
+				event.preventDefault();
+				return;
+			}
 			if (
 				event.key !== "c" ||
 				event.defaultPrevented ||
