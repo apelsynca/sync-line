@@ -50,6 +50,12 @@ On sign-in from a browser with an existing demo cookie, import user-created issu
 
 **Acceptance check.** Start with an untouched sample, a changed sample, and a user-created ENG-5. Sign in and verify that only the changed sample and ENG-5 carry over, preserving their titles, descriptions, statuses, priorities, and available numbers. A fictional assignee becomes **Unassigned**. If ENG-5 is taken, apply the same collision rule as for two devices. Repeating sign-in leaves one copy of each imported issue.
 
+### 5. Reopen the last workspace page from `/`
+
+When a signed-in user leaves Sync Line and later opens `/`, return them directly to the last workspace page they visited in that browser, including offline. Remember the page separately for each account. If the account has no remembered page or the page is unavailable, open `/app`. Signed-out visitors see the public landing page.
+
+**Acceptance check.** Open an issue, close the tab, then type `/` in a new tab and verify the same issue opens. Switch to **My issues**, close the browser, and open `/` offline. Verify **My issues** opens. Sign out and visit `/` to see the landing page. Sign in with a fresh account and verify `/` opens its own workspace at `/app`.
+
 ## Later roadmap
 
 | Milestone | Scope |
