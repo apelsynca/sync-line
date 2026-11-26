@@ -41,6 +41,16 @@ Open the localhost URL Vite prints and choose **Open your workspace**. Codes exp
 
 If this browser still has its old demo cookie, signing in brings your created issues and edited samples into your personal workspace once. They keep their available issue numbers, and fictional assignees become **Unassigned**.
 
+## Connect an MCP client
+
+Sign in to the workspace, open **MCP access**, and choose **Create token**. Copy the token before closing the dialog. In your MCP client, select **Streamable HTTP**, paste the displayed server URL, and set the bearer token. For clients with custom headers, set `Authorization` to `Bearer <token>`.
+
+The server exposes four tools. `search_issues` searches by ENG number, title, description, or label. Pass its `next_after` value as `after` to continue a search. `get_issue` reads an issue by UUID. `create_issue` accepts a title and optional fields. Supply a fresh UUID as `request_id` and reuse it when retrying the same creation. `update_issue` takes an issue UUID and the fields to change. Results include permanent links that open in the browser.
+
+Each workspace has one active token. It grants read and write access to synced issues until you choose **Revoke token**, including after browser sign-out. To replace a lost token, revoke it and create another.
+
+The endpoint is `/api/mcp`. Set `APP_ORIGIN` in `server/.env` to the browser app’s public origin for permanent links and HTTP origin checks. The default is `http://localhost:5173`. For a hosted deployment, serve the app over HTTPS and forward `/api` to the Rust server.
+
 ## Check the offline workflow
 
 Keep the API running. Build and serve the production client so the service worker can cache the app for offline navigation.

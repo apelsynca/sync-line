@@ -93,7 +93,15 @@ pub fn merge(heads: &mut Vec<Version>, incoming: Version) {
 }
 
 pub fn legacy_change(value: String, parents: &[Version], time: i64) -> Version {
-    let writer = Uuid::nil();
+    version_after(value, parents, time, Uuid::nil())
+}
+
+fn version_after<'a>(
+    value: String,
+    parents: impl IntoIterator<Item = &'a Version>,
+    time: i64,
+    writer: Uuid,
+) -> Version {
     let mut clock: BTreeMap<Uuid, u64> = BTreeMap::new();
     for parent in parents {
         for (&device, &counter) in &parent.clock {
@@ -108,6 +116,22 @@ pub fn legacy_change(value: String, parents: &[Version], time: i64) -> Version {
         writer,
         clock,
     }
+}
+
+// An ordinary edit continues the visible value and leaves competing branches available for review.
+pub fn edit_winner(value: String, heads: &[Version], time: i64) -> Version {
+    let Some(first) = heads.first() else {
+        return legacy_change(value, &[], time);
+    };
+    let parents = heads.iter().filter(|head| head.value == first.value);
+    let mut edit = version_after(value, parents.clone(), time, Uuid::nil());
+    if heads
+        .iter()
+        .any(|head| head.clock.get(&edit.writer) >= edit.clock.get(&edit.writer))
+    {
+        edit = version_after(edit.value, parents, time, Uuid::new_v4());
+    }
+    edit
 }
 
 #[cfg(test)]
@@ -136,6 +160,16 @@ mod tests {
             }
             assert_eq!(heads, [winner.clone(), tied.clone(), earlier.clone()]);
         }
+    }
+
+    #[test]
+    fn ordinary_server_edit_preserves_a_competing_server_branch() {
+        let browser_winner = change(1, 200, "visible");
+        let competing = change(0, 100, "still in review");
+        let mut heads = vec![browser_winner, competing.clone()];
+        let edit = edit_winner("updated".into(), &heads, 300);
+        merge(&mut heads, edit.clone());
+        assert_eq!(heads, [edit, competing]);
     }
 
     #[test]

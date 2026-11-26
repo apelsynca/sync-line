@@ -74,7 +74,7 @@ The longer-term feature roadmap draws on Linear’s issue tracking and planning 
 
 ### MCP server and Agent tab
 
-Expose Sync Line’s issue tools through a Model Context Protocol (MCP) server. Start with searching issues, reading an issue, creating one, and updating its fields. Bind each connection to the workspace its user authorized. Return permanent issue links and apply writes through the same validation and merge rules as browser edits.
+**MCP server implemented.** External clients can search, read, create, and update issues through `/api/mcp` using a revocable workspace token. The tools return permanent issue links and share the browser’s validation and field-level merge rules. [Connection instructions](../README.md#connect-an-mcp-client)
 
 Add **Agent** to the workspace sidebar. Use the supplied [Agent tab screenshot](references/agent-tab.png) as the visual reference. The selected tab opens a dark panel with a **New chat** menu at the top. Center a wide composer in the available panel, with a faint Sync Line mark behind it, an **Ask Sync Line…** placeholder, an add-context button, and an upward-arrow send button. Place **Connect Git provider** directly below the composer, followed by a dismissible row of three example cards. Each card has an icon, a title, and a short description. Keep the composer usable on narrow screens and stack the cards when the row no longer fits.
 

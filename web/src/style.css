@@ -338,6 +338,7 @@ nav p {
   }
   aside {
     display: flex;
+    flex-wrap: wrap;
     align-items: center;
     justify-content: space-between;
   }
@@ -574,6 +575,15 @@ nav p {
 .session-dialog h2 {
   font-size: 1.2rem;
   margin: 0;
+}
+.mcp-access label {
+  display: grid;
+  gap: 0.3rem;
+  margin-block: 1rem;
+}
+.mcp-access input {
+  width: 100%;
+  min-width: 0;
 }
 .session-dialog::backdrop {
   background: rgb(0 0 0 / 55%);

@@ -1,9 +1,11 @@
 mod auth;
 mod demo;
 mod mail;
+mod mcp;
 mod merge;
 
-use merge::{Changes, ORIGINAL_FIELDS, Versions};
+use merge::{Changes, Field, ORIGINAL_FIELDS, Versions};
+use std::collections::BTreeMap;
 
 use axum::{
     Json, Router,
@@ -85,6 +87,8 @@ struct Patch {
 enum Write {
     Patch(Patch),
     Legacy(Fields),
+    Create(BTreeMap<Field, String>),
+    Update(BTreeMap<Field, String>),
     Import { number: i32, fields: Fields },
 }
 
@@ -127,15 +131,18 @@ async fn write_issue_in(
     .fetch_optional(&mut **tx)
     .await
     .map_err(db_error)?;
-    if matches!(write, Write::Import { .. })
+    if matches!(write, Write::Import { .. } | Write::Create(_))
         && let Some(existing) = current
     {
         return Ok(existing);
     }
+    if matches!(write, Write::Update(_)) && current.is_none() {
+        return Err((StatusCode::NOT_FOUND, "Issue not found."));
+    }
     let preferred = match &write {
         Write::Patch(patch) => patch.number,
         Write::Import { number, .. } => *number,
-        Write::Legacy(_) => next,
+        Write::Legacy(_) | Write::Create(_) | Write::Update(_) => next,
     };
     let creating = current.is_none();
     let mut issue = current.unwrap_or_else(|| Issue {
@@ -169,6 +176,20 @@ async fn write_issue_in(
                 return Err((StatusCode::BAD_REQUEST, "Missing issue fields or number."));
             }
             patch.changes
+        }
+        Write::Create(fields) | Write::Update(fields) => {
+            let mut changes = Changes::new();
+            for (key, value) in fields {
+                if creating || *issue.fields.value_mut(key) != value {
+                    let heads = issue
+                        .versions
+                        .get(&key)
+                        .map(Vec::as_slice)
+                        .unwrap_or_default();
+                    changes.insert(key, merge::edit_winner(value, heads, now_ms()));
+                }
+            }
+            changes
         }
         Write::Legacy(mut fields) | Write::Import { mut fields, .. } => {
             let mut changes = Changes::new();
@@ -245,6 +266,10 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     sqlx::migrate!().run(&pool).await?;
     let app = Router::new()
         .merge(auth::routes(mail))
+        .merge(mcp::routes(
+            &pool,
+            &dotenvy::var("APP_ORIGIN").unwrap_or_else(|_| "http://localhost:5173".into()),
+        )?)
         .route("/api/workspaces/{workspace}/issues", get(issues))
         .route(
             "/api/workspaces/{workspace}/issues/{id}",

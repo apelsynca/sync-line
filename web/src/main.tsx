@@ -41,6 +41,7 @@ import {
 } from "./issueViews";
 import { type IssueFilters, SavedViews } from "./SavedViews";
 import { SignIn, SignInForm } from "./SignIn";
+import { McpAccess } from "./McpAccess";
 import { SignOutButton } from "./SignOutButton";
 import { activeAccount, watchSession } from "./session";
 import { emptyFields } from "./versions";
@@ -672,6 +673,7 @@ function Workspace({
 						canNavigate={!writeFailed}
 					/>
 				</nav>
+				<McpAccess account={account} />
 				<SignOutButton
 					account={account}
 					writeFailed={writeFailed || composerWriteFailed}

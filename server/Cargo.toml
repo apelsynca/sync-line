@@ -13,3 +13,9 @@ sqlx = { version = "0.8", default-features = false, features = ["runtime-tokio",
 tokio = { version = "1", features = ["macros", "rt-multi-thread", "net"] }
 uuid = { version = "1", features = ["v4", "serde"] }
 lettre = { version = "0.11", default-features = false, features = ["builder", "smtp-transport", "tokio1-rustls-tls"] }
+rmcp = { version = "3.12.0", default-features = false, features = ["server", "macros", "transport-streamable-http-server"] }
+schemars = { version = "1", features = ["uuid1"] }
+url = "2"
+
+[dev-dependencies]
+tower = { version = "0.5", features = ["util"] }
