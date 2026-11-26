@@ -1,3 +1,4 @@
+import { defaultProject, projectEditPrefix, refreshProjects, uploadProjects } from "./projects";
 import { request, RequestError } from "./api";
 import { activeAccount } from "./session";
 import { viewFromSearch, viewPath } from "./issueViews";
@@ -17,9 +18,10 @@ export type { Fields } from "./versions";
 export type Issue = Fields & {
   id: string;
   number: number;
+  project_id?: string;
   versions?: Versions;
 };
-type EditKey = { id: string; number: number; revision: string };
+type EditKey = { project_id?: string; id: string; number: number; revision: string };
 type Edit = EditKey & { changes: Changes };
 type StoredEdit =
   | Edit
@@ -33,7 +35,8 @@ const editPrefix = (account: string) => `sync-line:${account}:edit:`;
 const deletePrefix = (account: string) => `sync-line:${account}:delete:`;
 const offsetKey = (account: string) => `sync-line:${account}:clock-offset`;
 const lastPageKey = (account: string) => `sync-line:${account}:last-page`;
-export const composerKey = (account: string) => `sync-line:${account}:composer`;
+export const composerKey = (account: string, project = defaultProject.id) =>
+  `sync-line:${account}:composer${project === defaultProject.id ? "" : ":" + project}`;
 export const issuePath = (id: string) => "/app/issues/" + id;
 export const newIssuePath = issuePath("new");
 export const agentPath = "/app/agent";
@@ -103,7 +106,7 @@ export function hasLocalChanges(account: string) {
   return (
     pendingDeletes(account).length > 0 ||
     pending(account, cloudIssues(account)).length > 0 ||
-    localStorage.getItem(composerKey(account)) !== null
+    Object.keys(localStorage).some(key => key.startsWith(composerKey(account)) || key.startsWith(projectEditPrefix(account)))
   );
 }
 
@@ -127,6 +130,7 @@ function overlay(base: CloudIssue | undefined, edit: StoredEdit): Issue {
   return {
     ...fields,
     id: edit.id,
+    project_id: base?.project_id ?? edit.project_id,
     number: base?.number ?? edit.number,
     versions,
   };
@@ -220,6 +224,7 @@ export function saveIssue(
   }
   storeEdit(account, {
     id: base.id,
+    project_id: base.project_id,
     number: base.number,
     changes,
     revision: crypto.randomUUID(),
@@ -227,11 +232,12 @@ export function saveIssue(
   window.dispatchEvent(new Event("workspace-edit"));
 }
 
-export function createIssue(account: string, id: string, fields: Fields) {
+export function createIssue(account: string, id: string, fields: Fields, project = defaultProject.id) {
   return navigator.locks.request("sync-line:create:" + account, () => {
     const issues = readIssues(account);
     const base = issues.find((issue) => issue.id === id) ?? {
       ...fields,
+      project_id: project,
       id,
       number: (issues.at(-1)?.number ?? 0) + 1,
     };
@@ -272,6 +278,7 @@ export async function sync(account: string) {
       storeEdit(account, edit);
       return edit;
     });
+    await uploadProjects(account);
     for (const edit of outbox.sort((a, b) => a.number - b.number)) {
       if (activeAccount() !== account) return;
       const index = cloud.findIndex((row) => row.id === edit.id);
@@ -280,6 +287,7 @@ export async function sync(account: string) {
         let response: Response;
         try {
           response = await request(endpoint + "/" + edit.id, "PATCH", {
+            project_id: edit.project_id,
             number: edit.number,
             changes: edit.changes,
           });
@@ -331,5 +339,6 @@ export async function sync(account: string) {
         acknowledged: revisions.get(issue.id),
       })),
     );
+    await refreshProjects(account);
   });
 }

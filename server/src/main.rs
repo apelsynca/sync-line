@@ -4,6 +4,7 @@ mod demo;
 mod mail;
 mod mcp;
 mod merge;
+mod projects;
 
 use merge::{Changes, Field, ORIGINAL_FIELDS, Versions};
 use std::collections::BTreeMap;
@@ -38,6 +39,7 @@ struct Fields {
 struct Issue {
     #[serde(skip)]
     deleted: bool,
+    project_id: Uuid,
     id: Uuid,
     number: i32,
     #[serde(flatten)]
@@ -83,6 +85,8 @@ async fn issues(
 
 #[derive(Deserialize)]
 struct Patch {
+    #[serde(default)]
+    project_id: Uuid,
     number: i32,
     changes: Changes,
 }
@@ -165,6 +169,7 @@ async fn write_issue_in(
     let creating = current.is_none();
     let mut issue = current.unwrap_or_else(|| Issue {
         deleted: false,
+        project_id: Uuid::nil(),
         id,
         number: next,
         fields: Fields::default(),
@@ -204,6 +209,9 @@ async fn write_issue_in(
                         .any(|key| !patch.changes.contains_key(key)))
             {
                 return Err((StatusCode::BAD_REQUEST, "Missing issue fields or number."));
+            }
+            if creating {
+                issue.project_id = patch.project_id;
             }
             patch.changes
         }
@@ -247,12 +255,12 @@ async fn write_issue_in(
         issue.fields.value_mut(key).clone_from(&heads[0].value);
     }
     let f = &issue.fields;
-    sqlx::query("INSERT INTO issues(workspace_id, request_id, number, title, description, status, priority, assignee, versions, labels, position, deleted)
-        VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12) ON CONFLICT(workspace_id,request_id) DO UPDATE SET
+    sqlx::query("INSERT INTO issues(workspace_id, request_id, number, title, description, status, priority, assignee, versions, labels, position, deleted, project_id)
+        VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13) ON CONFLICT(workspace_id,request_id) DO UPDATE SET
         title=excluded.title, description=excluded.description, status=excluded.status,
         priority=excluded.priority, assignee=excluded.assignee, versions=excluded.versions, labels=excluded.labels, position=excluded.position, deleted=excluded.deleted")
         .bind(workspace).bind(id).bind(issue.number).bind(&f.title).bind(&f.description).bind(&f.status)
-        .bind(&f.priority).bind(&f.assignee).bind(DbJson(&issue.versions)).bind(&f.labels).bind(&f.position).bind(issue.deleted).execute(&mut **tx).await.map_err(db_error)?;
+        .bind(&f.priority).bind(&f.assignee).bind(DbJson(&issue.versions)).bind(&f.labels).bind(&f.position).bind(issue.deleted).bind(issue.project_id).execute(&mut **tx).await.map_err(db_error)?;
     if creating && issue.number == next {
         sqlx::query("UPDATE workspaces SET next_number=(
             SELECT min(i.number::bigint+1) FROM issues i WHERE i.workspace_id=$1 AND i.number >= $2
@@ -315,6 +323,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     sqlx::migrate!().run(&pool).await?;
     let app = Router::new()
         .merge(auth::routes(mail))
+        .merge(projects::routes())
         .merge(mcp::routes(&pool, &config.app_origin))
         .merge(mcp::agent::routes(&config.app_origin, config.agent)?)
         .route("/api/workspaces/{workspace}/issues", get(issues))
@@ -371,6 +380,7 @@ mod tests {
             id,
             Write::Patch(Patch {
                 number: 1,
+                project_id: Uuid::nil(),
                 changes: [(Field::Labels, labels.clone())].into(),
             }),
         )
@@ -397,7 +407,13 @@ mod tests {
             VALUES ($1,1,$2,'Original','Keep description','Todo','Me','Low')").bind(workspace).bind(original).execute(&pool).await.unwrap();
         let a = Uuid::new_v4();
         let b = Uuid::new_v4();
-        let patch = |changes| Write::Patch(Patch { number: 1, changes });
+        let patch = |changes| {
+            Write::Patch(Patch {
+                project_id: Uuid::nil(),
+                number: 1,
+                changes,
+            })
+        };
         let (title, status) = tokio::join!(
             write_issue(
                 &pool,

@@ -20,7 +20,7 @@ import "./agent.css";
 const examples = [
   {
     title: "Create an issue",
-    description: "Turn an idea into a task for Engineering.",
+    description: "Turn an idea into a workspace issue.",
     icon: FilePlus2,
     prompt: "Help me create an issue. Ask me for the details you need.",
   },
