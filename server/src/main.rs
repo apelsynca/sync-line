@@ -45,6 +45,8 @@ struct Issue {
     fields: Fields,
     #[sqlx(json)]
     versions: Versions,
+    #[sqlx(json)]
+    comments: BTreeMap<Uuid, Comment>,
 }
 
 fn now_ms() -> i64 {
@@ -169,6 +171,7 @@ async fn write_issue_in(
         number: next,
         fields: Fields::default(),
         versions: Versions::new(),
+        comments: BTreeMap::new(),
     });
     if creating && preferred != next {
         let taken: bool = sqlx::query_scalar(
@@ -193,6 +196,7 @@ async fn write_issue_in(
                 ..Fields::default()
             };
             issue.versions.clear();
+            issue.comments.clear();
             Changes::new()
         }
         Write::Patch(patch) => {
@@ -250,7 +254,8 @@ async fn write_issue_in(
     sqlx::query("INSERT INTO issues(workspace_id, request_id, number, title, description, status, priority, assignee, versions, labels, position, deleted)
         VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12) ON CONFLICT(workspace_id,request_id) DO UPDATE SET
         title=excluded.title, description=excluded.description, status=excluded.status,
-        priority=excluded.priority, assignee=excluded.assignee, versions=excluded.versions, labels=excluded.labels, position=excluded.position, deleted=excluded.deleted")
+        priority=excluded.priority, assignee=excluded.assignee, versions=excluded.versions, labels=excluded.labels, position=excluded.position, deleted=excluded.deleted,
+        comments=CASE WHEN excluded.deleted THEN '{}'::jsonb ELSE issues.comments END")
         .bind(workspace).bind(id).bind(issue.number).bind(&f.title).bind(&f.description).bind(&f.status)
         .bind(&f.priority).bind(&f.assignee).bind(DbJson(&issue.versions)).bind(&f.labels).bind(&f.position).bind(issue.deleted).execute(&mut **tx).await.map_err(db_error)?;
     if creating && issue.number == next {
@@ -277,6 +282,43 @@ async fn delete(
         },
     )
     .await?;
+    Ok(StatusCode::NO_CONTENT)
+}
+
+#[derive(Deserialize, Serialize)]
+struct Comment {
+    body: String,
+    created_at: i64,
+}
+
+async fn post_comment(
+    State(pool): State<PgPool>,
+    Path((workspace, issue, id)): Path<(Uuid, Uuid, Uuid)>,
+    headers: HeaderMap,
+    Json(comment): Json<Comment>,
+) -> Result<StatusCode, ApiError> {
+    auth::authorize(&pool, &headers, workspace).await?;
+    if comment.body.trim().is_empty()
+        || comment.body.chars().count() > 10000
+        || comment.body.contains('\0')
+    {
+        return Err((StatusCode::BAD_REQUEST, "Invalid comment."));
+    }
+    // Existing entries take precedence when a device retries after losing the response.
+    let result = sqlx::query(
+        "UPDATE issues SET comments=jsonb_build_object($3::text, $4::jsonb) || comments
+         WHERE workspace_id=$1 AND request_id=$2 AND NOT deleted",
+    )
+    .bind(workspace)
+    .bind(issue)
+    .bind(id.to_string())
+    .bind(DbJson(comment))
+    .execute(&pool)
+    .await
+    .map_err(db_error)?;
+    if result.rows_affected() == 0 {
+        return Err((StatusCode::NOT_FOUND, "Issue not found."));
+    }
     Ok(StatusCode::NO_CONTENT)
 }
 
@@ -321,6 +363,10 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         .route(
             "/api/workspaces/{workspace}/issues/{id}",
             put(save).patch(patch).delete(delete),
+        )
+        .route(
+            "/api/workspaces/{workspace}/issues/{id}/comments/{comment}",
+            put(post_comment),
         )
         .layer(DefaultBodyLimit::max(8 * 1024 * 1024))
         .with_state(pool);
