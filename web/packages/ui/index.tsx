@@ -105,13 +105,19 @@ export function Modal({
 
 export function ComposerDialog({
   children,
+  expanded,
   onDismiss,
 }: {
   children: ReactNode;
+  expanded: boolean;
   onDismiss: () => void;
 }) {
   return (
-    <Modal className="composer" labelledBy="editor-title" onDismiss={onDismiss}>
+    <Modal
+      className={expanded ? "composer expanded" : "composer"}
+      labelledBy="editor-title"
+      onDismiss={onDismiss}
+    >
       {children}
     </Modal>
   );

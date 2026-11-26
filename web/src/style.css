@@ -57,8 +57,7 @@ nav p {
   color: var(--accent);
 }
 .nav-issues,
-.new-link,
-.close {
+.new-link {
   display: inline-flex;
   align-items: center;
   gap: 0.4rem;
@@ -95,14 +94,12 @@ nav p {
   font-weight: 600;
   margin: 0;
 }
-.new-link,
-.close {
+.new-link {
   margin-left: auto;
   color: var(--muted);
   text-decoration: none;
 }
-.new-link:hover,
-.close:hover {
+.new-link:hover {
   color: var(--ink);
 }
 .issue-group {
@@ -152,18 +149,34 @@ a.row:hover {
   min-width: 0;
   margin: 0;
   border: 0;
-  padding: 1rem;
+  padding: 0.8rem;
 }
 .editor-head {
   color: var(--muted);
-  margin-bottom: 1.4rem;
+  gap: 0.35rem;
+  margin-bottom: 1.35rem;
 }
 .editor-head h1 {
   color: var(--ink);
 }
-.close {
-  font-size: 1.4rem;
-  padding: 0 0.5rem;
+.editor-tools {
+  display: flex;
+  gap: 0.65rem;
+  margin-left: auto;
+}
+.editor-tool {
+  display: grid;
+  place-items: center;
+  width: 1.95rem;
+  height: 1.95rem;
+  padding: 0;
+  border-radius: 0.5rem;
+  background: transparent;
+  color: var(--muted);
+}
+.editor-tool:hover {
+  color: var(--ink);
+  background: var(--control);
 }
 .editor :is(.issue-title, textarea) {
   display: block;
@@ -176,18 +189,33 @@ a.row:hover {
 }
 .editor :is(.issue-title, textarea):focus-visible {
   outline: none;
-  background: rgb(255 255 255 / 2%);
 }
 .editor :is(input, textarea)::placeholder {
-  color: #96969c;
+  color: #818186;
 }
 .issue-title {
   font-size: 1.2rem;
   font-weight: 600;
 }
 .editor textarea {
-  resize: vertical;
   min-height: 4.8rem;
+}
+.composer.expanded .editor,
+.composer.expanded fieldset {
+  height: 100%;
+}
+.composer.expanded fieldset {
+  display: flex;
+  flex-direction: column;
+}
+.composer.expanded textarea {
+  flex: 1;
+}
+.properties .property:not(:first-child) {
+  color: var(--muted);
+}
+.properties .property > svg:last-child {
+  display: none;
 }
 .properties,
 .actions {
@@ -204,6 +232,10 @@ a.row:hover {
 }
 .actions [role="status"] {
   margin-right: auto;
+}
+.create-issue {
+  background: #5e6ad2;
+  color: white;
 }
 .create-more {
   color: var(--muted);

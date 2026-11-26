@@ -6,6 +6,8 @@ import {
   ListTodo,
   LogIn,
   Copy,
+  Maximize2,
+  Minimize2,
   Plus,
   Signal,
   UserRound,
@@ -189,6 +191,7 @@ function Editor({
     if (!issue) titleInput.current?.focus();
   }, [issue]);
   const [createMore, setCreateMore] = useState(false);
+  const [expanded, setExpanded] = useState(false);
   const [requestId, setRequestId] = useState(() => crypto.randomUUID());
   const [creating, setCreating] = useState(false);
   const [feedback, setFeedback] = useState("");
@@ -274,9 +277,22 @@ function Editor({
           <h1 id="editor-title">
             {issue ? "ENG-" + issue.number : "New issue"}
           </h1>
-          <a className="close" href="/app" aria-label="Back to team issues">
-            <X size={18} aria-hidden="true" />
-          </a>
+          <div className="editor-tools">
+            {!issue && (
+              <button
+                type="button"
+                className="editor-tool"
+                aria-label={expanded ? "Restore composer size" : "Expand composer"}
+                title={expanded ? "Restore composer size" : "Expand composer"}
+                onClick={() => setExpanded(!expanded)}
+              >
+                {expanded ? <Minimize2 size={15} /> : <Maximize2 size={15} />}
+              </button>
+            )}
+            <a className="editor-tool" href="/app" aria-label="Back to team issues">
+              <X size={17} aria-hidden="true" />
+            </a>
+          </div>
         </div>
         <input
           className="issue-title"
@@ -356,7 +372,7 @@ function Editor({
               </button>
             </>
           )}
-          {!issue && <button>Create issue</button>}
+          {!issue && <button className="create-issue">Create issue</button>}
           {issue && !draft.title.trim() && (
             <span>Enter a title to sync this issue.</span>
           )}
@@ -367,7 +383,7 @@ function Editor({
   return issue ? (
     form
   ) : (
-    <ComposerDialog onDismiss={() => location.assign("/app")}>
+    <ComposerDialog expanded={expanded} onDismiss={() => location.assign("/app")}>
       {form}
     </ComposerDialog>
   );

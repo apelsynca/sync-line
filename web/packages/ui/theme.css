@@ -11,7 +11,7 @@
   --accent: #ff9852;
   --focus: #aaaab2;
   font:
-    100%/1.45 Inter,
+    93.75%/1.45 Inter,
     "Segoe UI",
     system-ui,
     sans-serif;
@@ -28,6 +28,9 @@ button,
 input,
 textarea {
   font: inherit;
+}
+textarea {
+  resize: none;
 }
 :focus-visible {
   outline: 2px solid var(--focus);
@@ -111,6 +114,13 @@ button:disabled {
 .composer .editor {
   border: 0;
 }
+.composer.expanded {
+  inset: 1rem;
+  margin: auto;
+  width: min(72rem, calc(100% - 2rem));
+  height: calc(100dvh - 2rem);
+  max-height: none;
+}
 .property,
 .team-chip {
   position: relative;
@@ -122,6 +132,11 @@ button:disabled {
 }
 .team-chip svg {
   color: var(--accent);
+}
+.team-chip {
+  background: #242426;
+  color: var(--muted);
+  font-weight: 600;
 }
 .property {
   gap: 0.35rem;
