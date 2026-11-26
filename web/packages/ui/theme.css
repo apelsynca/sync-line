@@ -9,7 +9,6 @@
   --ink: #ededee;
   --muted: #aaaab0;
   --accent: #ff9852;
-  --focus: #aaaab2;
   font:
     93.75%/1.45 Inter,
     "Segoe UI",
@@ -32,9 +31,13 @@ textarea {
 textarea {
   resize: none;
 }
-:focus-visible {
-  outline: 2px solid var(--focus);
-  outline-offset: 2px;
+@media (forced-colors: none) {
+  :focus-visible {
+    outline: none;
+  }
+  :is(a, button, input, textarea, summary):focus-visible {
+    box-shadow: inset 0 -2px currentColor;
+  }
 }
 .brand,
 .status,
@@ -64,7 +67,7 @@ button {
   cursor: pointer;
 }
 .button:hover,
-button:hover {
+button:where(:not(.property-icon-only)):hover {
   filter: brightness(1.12);
 }
 button:disabled {
@@ -153,7 +156,7 @@ button:disabled {
   padding: 0;
   background: transparent;
 }
-.property:hover,
+.property:where(:not(.property-icon-only)):hover,
 .property[data-state="open"] {
   background: var(--hover);
 }
@@ -180,7 +183,6 @@ button:disabled {
 }
 .property-option[data-highlighted] {
   background: var(--hover);
-  outline: none;
 }
 .property-check {
   display: flex;

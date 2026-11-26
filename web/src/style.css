@@ -208,7 +208,7 @@ nav p {
   color: var(--ink);
   background: var(--surface);
 }
-.row:has(.row-link):hover {
+.row:has(.row-link:hover) {
   background: var(--control);
   border-radius: 7px;
 }
@@ -253,9 +253,6 @@ nav p {
   border: 0;
   border-radius: 5px;
   color: var(--ink);
-}
-.editor :is(.issue-title, textarea):focus-visible {
-  outline: none;
 }
 .editor :is(input, textarea)::placeholder {
   color: #818186;
@@ -381,7 +378,6 @@ nav p {
   font-size: 0.85rem;
 }
 .issue-search:focus-visible {
-  outline: none;
   background: var(--control);
 }
 .search-empty {
@@ -416,7 +412,7 @@ nav p {
   border-radius: 8px;
 }
 .board-column[data-target="true"] {
-  border-color: var(--accent);
+  background: var(--control);
 }
 .board-column h3,
 .card-properties {
@@ -457,7 +453,7 @@ nav p {
   opacity: 0.45;
 }
 .issue-group[data-target="true"] summary {
-  outline: 1px solid var(--accent);
+  background: var(--control);
 }
 [data-before="true"],
 .drop-at-end {

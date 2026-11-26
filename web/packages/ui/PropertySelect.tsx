@@ -32,7 +32,6 @@ export function PropertySelect({
         id={id}
         className={iconOnly ? "property property-icon-only" : "property"}
         aria-label={label}
-        title={iconOnly ? label : undefined}
       >
         {icon?.(value)}
         {!iconOnly && (
