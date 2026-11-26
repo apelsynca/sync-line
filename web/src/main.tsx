@@ -53,6 +53,7 @@ import { activeAccount, watchSession } from "./session";
 import { emptyFields } from "./versions";
 import {
 	agentPath,
+	projectsPath,
 	composerKey,
 	createIssue,
 	deleteIssue,
@@ -66,7 +67,7 @@ import {
 	saveIssue,
 	sync,
 } from "./workspace";
-import { ProjectMenu } from "./ProjectMenu";
+import { ProjectsPage } from "./ProjectsPage";
 import { defaultProject, readProjects, selectedProjectKey, type Project } from "./projects";
 import "./style.css";
 
@@ -84,12 +85,14 @@ const anyPriority = "Any priority";
 const anyAssignee = "Any assignee";
 
 function IssueList({
-	projectName = defaultProject.name,
+	projectName,
+	projects = [],
 	account,
 	issues,
 	onCreate,
 }: {
 	projectName?: string;
+	projects?: Project[];
 	account?: string;
 	issues: Issue[];
 	onCreate?: () => void;
@@ -158,8 +161,10 @@ function IssueList({
 			aria-label={preview ? "Demo workspace preview" : "Workspace issues"}
 		>
 			<div className="list-head">
-				<Team name={projectName} />
-				<ChevronRight size={14} aria-hidden="true" />
+				{(preview || projectName) && <>
+					<Team name={projectName ?? defaultProject.name} />
+					<ChevronRight size={14} aria-hidden="true" />
+				</>}
 				<h2>Issues</h2>
 				{onCreate && (
 					<button
@@ -196,6 +201,8 @@ function IssueList({
 				))}
 				{!preview && (
 					<>
+						{!projectName && <PropertySelect label="Sort issues" value={filters.sort ?? "Manual order"}
+              options={["Manual order", "Project"]} onChange={sort => updateFilters({ sort })} />}
 						{view !== "backlog" && (
 							<PropertySelect
 								label="Filter by status"
@@ -251,14 +258,24 @@ function IssueList({
 							: "No issues assigned to you."}
 				</p>
 			)}
-			<IssueGroups
+			{filters.sort === "Project" && !projectName ? [...projects]
+				.sort((a, b) => a.name.localeCompare(b.name))
+				.map(project => {
+					const belongs = (issue: Issue) => (issue.project_id ?? defaultProject.id) === project.id;
+					const rows = visibleIssues.filter(belongs);
+					return rows.length > 0 && <section className="project-group" key={project.id}>
+						<h3>{project.name}</h3>
+						<IssueGroups account={account} issues={issues.filter(belongs)} visibleIssues={rows}
+							statuses={statuses} board={view === "board"} hideEmpty />
+					</section>;
+				}) : <IssueGroups
 				account={account}
 				issues={issues}
 				visibleIssues={visibleIssues}
 				statuses={statuses.filter((status) => statusFilter === anyStatus || status === statusFilter)}
 				board={view === "board"}
 				hideEmpty={view !== "board" && hideEmptyGroups}
-			/>
+			/>}
 		</section>
 	);
 }
@@ -640,7 +657,7 @@ function Workspace({
 	closeComposer: () => void;
 }) {
 	const [projects, setProjects] = useState(() => readProjects(account));
-	const [preferred, setPreferred] = useState(() => localStorage.getItem(selectedProjectKey(account)));
+	const scopedProject = new URLSearchParams(location.search).get("project");
 	const [issues, setIssues] = useState(() => readIssues(account));
 	const [expired, setExpired] = useState(false);
 	const [writeFailed, setWriteFailed] = useState(false);
@@ -706,17 +723,12 @@ function Workspace({
 	}, [account]);
 	const path = location.pathname;
 	const selected = issues.find((issue) => issuePath(issue.id) === path);
-	const projectId = selected ? selected.project_id ?? defaultProject.id : preferred ?? defaultProject.id;
+	const projectId = selected ? selected.project_id ?? defaultProject.id : scopedProject ?? localStorage.getItem(selectedProjectKey(account)) ?? defaultProject.id;
 	const active = projects.find(project => project.id === projectId) ?? { id: projectId, name: "Project" };
-	const members = issues.filter(issue => (issue.project_id ?? defaultProject.id) === projectId);
+	const members = !scopedProject ? issues : issues.filter(issue => (issue.project_id ?? defaultProject.id) === projectId);
 	useEffect(() => {
-		if (selected) localStorage.setItem(selectedProjectKey(account), projectId);
-	}, [account, selected, projectId]);
-	function selectProject(id: string) {
-		localStorage.setItem(selectedProjectKey(account), id);
-		setPreferred(id);
-		if (path !== "/app") location.assign("/app");
-	}
+		if (selected || scopedProject) localStorage.setItem(selectedProjectKey(account), projectId);
+	}, [account, selected, scopedProject, projectId]);
 
 	useEffect(() => {
 		const remember = () => rememberWorkspacePage(account);
@@ -733,8 +745,11 @@ function Workspace({
 			<aside>
 				<Brand href="/app" />
 				<nav aria-label="Your workspace">
-					<a href="/app" className="nav-issues" aria-current={path !== agentPath ? "location" : undefined}>
+					<a href="/app" className="nav-issues" aria-current={path !== agentPath && path !== projectsPath ? "location" : undefined}>
 						<ListTodo size={16} aria-hidden="true" /> Issues
+					</a>
+					<a href={projectsPath} className="nav-issues" aria-current={path === projectsPath ? "page" : undefined}>
+						<Layers size={16} aria-hidden="true" /> Projects
 					</a>
 					<a href={agentPath} className="nav-issues" aria-current={path === agentPath ? "page" : undefined}>
 						<MousePointer2 size={16} aria-hidden="true" /> Agent
@@ -757,9 +772,6 @@ function Workspace({
 				/>
 			</aside>
 			<main className={path === agentPath ? "agent-main" : undefined}>
-				<header className="project-toolbar" aria-label="Project controls">
-					<ProjectMenu account={account} projects={projects} active={active} select={selectProject} />
-				</header>
 				{expired && (
 					<button
 						type="button"
@@ -786,19 +798,22 @@ function Workspace({
 						/>
 					</Modal>
 				)}
-				{path === agentPath ? (
+				{path === projectsPath ? (
+					<ProjectsPage account={account} projects={projects} issues={issues} />
+				) : path === agentPath ? (
 					<Agent account={account} issues={issues} />
 				) : path === "/app" || path === newIssuePath ? (
 					members.length ? (
 						<IssueList
-							projectName={active.name}
+							projectName={scopedProject ? active.name : undefined}
+							projects={projects}
 							account={account}
 							issues={members}
 							onCreate={openComposer}
 						/>
 					) : (
 						<section className="empty">
-							<h1>Your issues</h1>
+							<h1>{scopedProject ? active.name : "Your issues"}</h1>
 							<button
 								type="button"
 								onClick={openComposer}
@@ -864,7 +879,7 @@ function App() {
 	const requiresSignIn = new URLSearchParams(location.search).has("signin");
 	useEffect(() => {
 		function onKeyDown(event: KeyboardEvent) {
-			if (event.key === "Tab" && !document.querySelector("dialog[open]") && !event.ctrlKey && !event.metaKey && !event.altKey) {
+			if (event.key === "Tab" && location.pathname !== projectsPath && !document.querySelector("dialog[open]") && !event.ctrlKey && !event.metaKey && !event.altKey) {
 				event.preventDefault();
 				return;
 			}

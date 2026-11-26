@@ -17,13 +17,15 @@ test("offline projects keep separate issues and composer drafts after reopening"
     await title.fill("Engineering draft");
     await page.getByRole("button", { name: "Close new issue" }).click();
 
-    const controls = page.getByRole("main").locator("header", { has: page.getByRole("combobox", { name: "Current project" }) });
-    await controls.getByRole("button", { name: "New project" }).click();
+    const projectsTab = page.getByRole("link", { name: "Projects", exact: true });
+    await projectsTab.click();
+    await page.getByRole("button", { name: "New project" }).click();
     await page.getByLabel("Project name").fill("Design");
     await page.getByRole("button", { name: "Create project" }).click();
-    await controls.getByRole("button", { name: "Rename project" }).click();
+    await page.getByRole("button", { name: "Rename Design" }).click();
     await page.getByLabel("Project name").fill("Product design");
     await page.getByRole("button", { name: "Save name" }).click();
+    await page.getByRole("link", { name: "Product design" }).click();
     await firstIssue.click();
     expect(await title.inputValue()).toBe("");
     await title.fill("Review designs");
@@ -33,13 +35,19 @@ test("offline projects keep separate issues and composer drafts after reopening"
     const bookmark = await link.getAttribute("href");
     await page.reload();
     await link.waitFor();
-    await page.getByRole("combobox", { name: "Current project" }).click();
-    await page.getByRole("option", { name: "Engineering" }).click();
+    await projectsTab.click();
+    expect(await page.getByRole("row", { name: /Product design/ }).getByRole("cell").first().innerText()).toBe("1");
+    await page.getByRole("link", { name: "Engineering" }).click();
     await firstIssue.click();
     expect(await title.inputValue()).toBe("Engineering draft");
+    await page.getByRole("button", { name: "Create issue", exact: true }).click();
+    await page.getByRole("navigation").getByRole("link", { name: "Issues", exact: true }).click();
+    await page.getByRole("combobox", { name: "Sort issues" }).click();
+    await page.getByRole("option", { name: "Project", exact: true }).click();
+    expect(await page.locator(".project-group > h3").allTextContents()).toEqual(["Engineering", "Product design"]);
     await page.goto(new URL(bookmark!, page.url()).href);
     expect(await title.inputValue()).toBe("Review designs");
-    expect(await controls.getByRole("combobox", { name: "Current project" }).innerText()).toBe("Product design");
+    expect(await page.locator(".editor-head .team-chip").innerText()).toBe("Product design");
   } finally {
     await browser.close();
     await server.close();

@@ -41,15 +41,23 @@ export const composerKey = (account: string, project = defaultProject.id) =>
   `sync-line:${account}:composer${project === defaultProject.id ? "" : ":" + project}`;
 export const issuePath = (id: string) => "/app/issues/" + id;
 export const newIssuePath = issuePath("new");
+export const projectsPath = "/app/projects";
 export const agentPath = "/app/agent";
+
+function issueListPage(search: string) {
+  const url = new URL(viewPath(viewFromSearch(search)), location.origin);
+  const project = new URLSearchParams(search).get("project");
+  if (project) url.searchParams.set("project", project);
+  return url.pathname + url.search;
+}
 
 export function rememberWorkspacePage(account: string) {
   if (document.visibilityState !== "visible") return;
   const path = location.pathname;
   if (path === newIssuePath) return;
   let page = "/app";
-  if (path === "/app") page = viewPath(viewFromSearch(location.search));
-  else if (path === agentPath || path.startsWith("/app/issues/")) page = path;
+  if (path === "/app") page = issueListPage(location.search);
+  else if (path === projectsPath || path === agentPath || path.startsWith("/app/issues/")) page = path;
   try {
     localStorage.setItem(lastPageKey(account), page);
   } catch {
@@ -59,8 +67,8 @@ export function rememberWorkspacePage(account: string) {
 
 export function lastWorkspacePage(account: string) {
   const page = localStorage.getItem(lastPageKey(account));
-  if (page === agentPath) return page;
-  if (page?.startsWith("/app?")) return viewPath(viewFromSearch(page.slice(4)));
+  if (page === projectsPath || page === agentPath) return page;
+  if (page?.startsWith("/app?")) return issueListPage(page.slice(4));
   if (
     page?.startsWith("/app/issues/") &&
     page !== newIssuePath &&

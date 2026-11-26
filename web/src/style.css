@@ -50,18 +50,41 @@ aside {
 aside nav {
   margin-top: 2.75rem;
 }
-.project-toolbar {
-  display: flex;
-  flex-wrap: wrap;
-  align-items: center;
-  justify-content: space-between;
-  gap: 0.25rem 1rem;
-  padding: 0.5rem 1rem;
+.projects-page h1, .project-group h3 {
+  margin: 0;
+  font-size: 1rem;
+}
+.projects-page table {
+  width: 100%;
+  border-collapse: collapse;
+  text-align: left;
+  font-variant-numeric: tabular-nums;
+}
+.projects-page caption, .project-group h3 {
+  padding: 1rem;
+  text-align: left;
+}
+.projects-page :is(td, th) {
+  padding: 0.5rem clamp(0.35rem, 1vw, 1rem);
   border-bottom: 1px solid var(--line);
 }
-.project-toolbar .session-action {
-  margin: 0;
+.projects-page thead {
+  color: var(--muted);
+  font-size: 0.8rem;
 }
+.projects-page tbody th {
+  width: 70%;
+  overflow-wrap: anywhere;
+}
+.projects-page a {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  color: var(--ink);
+  text-decoration: none;
+}
+.projects-page a:hover { text-decoration: underline; }
+.projects-page a svg { flex-shrink: 0; color: var(--accent); }
 .team,
 .list-head,
 .editor-head,

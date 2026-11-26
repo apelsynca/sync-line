@@ -6,6 +6,7 @@ import type { IssueView } from "./issueViews";
 export type IssueFilters = {
   view: IssueView;
   query: string;
+  sort?: string;
   statusFilter: string;
   priorityFilter: string;
   assigneeFilter?: string;
