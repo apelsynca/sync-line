@@ -56,4 +56,6 @@ Signing out with pending changes keeps them on this device for the same account.
 
 If two devices create the same issue number offline, the first synced issue keeps it. Both bookmarks still work. Edits to different fields merge automatically. When the same field has competing values, **Review previous edit** lets you restore an older value or save a combined edit. Other issues continue syncing while a review is open.
 
+Run `bunx playwright install chromium` and `bun test` from `web/` to check issue dragging and ordering.
+
 Run `cargo test` from `server/` with `DATABASE_URL` set to exercise sign-in code expiry and reuse, account isolation, session revocation, concurrent upload retries, demo imports, number collisions, and field-level conflict resolution. SQLx creates temporary databases, so the test role needs permission to create databases.

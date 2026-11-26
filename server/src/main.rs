@@ -27,6 +27,8 @@ struct Fields {
     priority: String,
     #[serde(default)]
     labels: String,
+    #[serde(default)]
+    position: String,
 }
 
 #[derive(Serialize, sqlx::FromRow)]
@@ -194,12 +196,12 @@ async fn write_issue_in(
         issue.fields.value_mut(key).clone_from(&heads[0].value);
     }
     let f = &issue.fields;
-    sqlx::query("INSERT INTO issues(workspace_id, request_id, number, title, description, status, priority, assignee, versions, labels)
-        VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10) ON CONFLICT(workspace_id,request_id) DO UPDATE SET
+    sqlx::query("INSERT INTO issues(workspace_id, request_id, number, title, description, status, priority, assignee, versions, labels, position)
+        VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11) ON CONFLICT(workspace_id,request_id) DO UPDATE SET
         title=excluded.title, description=excluded.description, status=excluded.status,
-        priority=excluded.priority, assignee=excluded.assignee, versions=excluded.versions, labels=excluded.labels")
+        priority=excluded.priority, assignee=excluded.assignee, versions=excluded.versions, labels=excluded.labels, position=excluded.position")
         .bind(workspace).bind(id).bind(issue.number).bind(&f.title).bind(&f.description).bind(&f.status)
-        .bind(&f.priority).bind(&f.assignee).bind(DbJson(&issue.versions)).bind(&f.labels).execute(&mut **tx).await.map_err(db_error)?;
+        .bind(&f.priority).bind(&f.assignee).bind(DbJson(&issue.versions)).bind(&f.labels).bind(&f.position).execute(&mut **tx).await.map_err(db_error)?;
     if creating && issue.number == next {
         sqlx::query("UPDATE workspaces SET next_number=(
             SELECT min(i.number::bigint+1) FROM issues i WHERE i.workspace_id=$1 AND i.number >= $2

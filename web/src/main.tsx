@@ -1,13 +1,11 @@
 /// <reference types="vite/client" />
 
 import {
-	Avatar,
 	Brand,
 	ButtonLink,
 	ComposerDialog,
 	Modal,
 	PropertySelect,
-	Status,
 	StatusIcon,
 } from "@sync-line/ui";
 import {
@@ -33,9 +31,8 @@ import seeds from "../shared/demo-v1.json";
 import { RequestError } from "./api";
 import { CommandMenu } from "./CommandMenu";
 import { FieldReview } from "./FieldReview";
-import { IssueBoard } from "./IssueBoard";
-import { IssueLabels, labelsMaxLength } from "./IssueLabels";
-import { IssueLink } from "./IssueLink";
+import { IssueGroups } from "./IssueGroups";
+import { labelsMaxLength } from "./IssueLabels";
 import {
 	type IssueView,
 	issueStatuses,
@@ -233,57 +230,14 @@ function IssueList({
 							: "No issues assigned to you."}
 				</p>
 			)}
-			{view === "board" && account ? (
-				<IssueBoard
-					account={account}
-					issues={visibleIssues}
-					statuses={statusFilter === anyStatus ? statuses : [statusFilter]}
-				/>
-			) : (
-				statuses.map((status) => {
-					const group = visibleIssues.filter(
-						(issue) => issue.status === status,
-					);
-					if (hideEmptyGroups && !group.length) return null;
-					return (
-						<details className="issue-group" key={status} open>
-							<summary>
-								<ChevronRight
-									className="group-chevron"
-									size={14}
-									aria-hidden="true"
-								/>
-								<Status value={status} />
-								<span>{group.length}</span>
-							</summary>
-							<ul>
-								{group.map((issue) => {
-									const content = (
-										<>
-											<span className="identifier">ENG-{issue.number}</span>
-											<StatusIcon value={status} />
-											<strong className="issue-content">{issue.title}</strong>
-											<IssueLabels value={issue.labels} />
-											<Avatar name={issue.assignee} />
-										</>
-									);
-									return (
-										<li key={issue.id}>
-											{preview ? (
-												<div className="row">{content}</div>
-											) : (
-												<IssueLink className="row" id={issue.id}>
-													{content}
-												</IssueLink>
-											)}
-										</li>
-									);
-								})}
-							</ul>
-						</details>
-					);
-				})
-			)}
+			<IssueGroups
+				account={account}
+				issues={issues}
+				visibleIssues={visibleIssues}
+				statuses={statuses.filter((status) => statusFilter === anyStatus || status === statusFilter)}
+				board={view === "board"}
+				hideEmpty={view !== "board" && hideEmptyGroups}
+			/>
 		</section>
 	);
 }
@@ -312,6 +266,7 @@ function Home() {
 					issues={seeds.map((fields, index) => ({
 						...fields,
 						labels: "",
+						position: "",
 						id: String(index),
 						number: index + 1,
 					}))}

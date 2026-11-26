@@ -1,6 +1,6 @@
 import type seeds from "../shared/demo-v1.json";
 
-export type Fields = (typeof seeds)[number] & { labels: string };
+export type Fields = (typeof seeds)[number] & { labels: string; position: string };
 export const emptyFields: Fields = {
   title: "",
   description: "",
@@ -8,6 +8,7 @@ export const emptyFields: Fields = {
   assignee: "",
   priority: "No priority",
   labels: "",
+  position: "",
 };
 
 export const fieldNames = [
@@ -17,6 +18,7 @@ export const fieldNames = [
   "priority",
   "assignee",
   "labels",
+  "position",
 ] as const;
 export type Field = keyof Fields;
 export type Version = {

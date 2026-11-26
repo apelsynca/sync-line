@@ -4,15 +4,19 @@ import { issuePath } from "./workspace";
 export function IssueLink({
   id,
   className,
+  title,
   children,
 }: {
   id: string;
   className?: string;
+  title?: string;
   children: ReactNode;
 }) {
   return (
     <a
       className={className}
+      title={title}
+      aria-keyshortcuts="Alt+ArrowUp Alt+ArrowDown"
       href={issuePath(id)}
       draggable={false}
       onClick={(event) => {

@@ -427,6 +427,62 @@ a.row:hover {
   background: var(--surface);
   cursor: grab;
 }
+a.row,
+.card-link {
+  cursor: grab;
+}
+a.row .issue-content,
+.card-link .issue-content {
+  -webkit-user-select: none;
+  user-select: none;
+}
+.issue-grip {
+  flex-shrink: 0;
+  color: var(--muted);
+}
+.board-card .card-link {
+  position: relative;
+  padding-right: 1rem;
+}
+.card-link .issue-grip {
+  position: absolute;
+  right: 0;
+  top: 0;
+}
+[data-dragging="true"] {
+  opacity: 0.45;
+}
+.issue-group[data-target="true"] summary {
+  outline: 1px solid var(--accent);
+}
+[data-before="true"],
+.drop-at-end {
+  position: relative;
+}
+[data-before="true"]::before,
+.drop-at-end::after {
+  content: "";
+  position: absolute;
+  inset-inline: 0;
+  height: 2px;
+  background: var(--accent);
+  pointer-events: none;
+}
+[data-before="true"]::before {
+  top: -2px;
+}
+.drop-at-end::after {
+  bottom: -2px;
+}
+.drag-preview {
+  max-width: 20rem;
+  padding: 0.65rem;
+  border: 1px solid var(--accent);
+  border-radius: 7px;
+  background: var(--surface);
+  overflow-wrap: anywhere;
+  pointer-events: none;
+}
 .board-card a {
   display: grid;
   gap: 0.2rem;

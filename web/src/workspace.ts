@@ -21,7 +21,11 @@ export type Issue = Fields & {
 };
 type EditKey = { id: string; number: number; revision: string };
 type Edit = EditKey & { changes: Changes };
-type StoredEdit = Edit | (EditKey & Omit<Fields, "labels"> & { labels?: string });
+type StoredEdit =
+  | Edit
+  | (EditKey &
+      Omit<Fields, "labels" | "position"> &
+      Partial<Pick<Fields, "labels" | "position">>);
 type CloudIssue = Issue & { acknowledged?: string };
 
 const cloudKey = (account: string) => `sync-line:${account}:cloud`;
@@ -62,7 +66,11 @@ function cloudIssues(account: string): CloudIssue[] {
   const rows: CloudIssue[] = JSON.parse(
     localStorage.getItem(cloudKey(account)) ?? "[]",
   );
-  return rows.map((issue) => ({ ...issue, labels: issue.labels ?? "" }));
+  return rows.map((issue) => ({
+    ...issue,
+    labels: issue.labels ?? "",
+    position: issue.position ?? "",
+  }));
 }
 
 function pending(account: string, cloud: CloudIssue[]) {

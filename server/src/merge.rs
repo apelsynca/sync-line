@@ -14,6 +14,7 @@ pub enum Field {
     Assignee,
     Priority,
     Labels,
+    Position,
 }
 
 // Older offline clients create and replace issues using these five fields.
@@ -34,6 +35,7 @@ impl Fields {
             Field::Assignee => &mut self.assignee,
             Field::Priority => &mut self.priority,
             Field::Labels => &mut self.labels,
+            Field::Position => &mut self.position,
         }
     }
 }
@@ -55,6 +57,7 @@ impl Version {
         let valid = match field {
             Field::Title => !value.trim().is_empty() && value.chars().count() <= 200,
             Field::Description => true,
+            Field::Position => value.bytes().all(|b| b.is_ascii_alphanumeric()),
             Field::Status => ["Backlog", "Todo", "In progress", "Done"].contains(&value),
             Field::Assignee => ["", "Me"].contains(&value),
             Field::Priority => ["No priority", "Low", "Medium", "High"].contains(&value),

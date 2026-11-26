@@ -9,7 +9,9 @@
     "dev": "vite"
   },
   "dependencies": {
+    "@dnd-kit/core": "^6.3.1",
     "@sync-line/ui": "*",
+    "fractional-indexing": "^4.0.0",
     "lucide-react": "^1.80.0",
     "react": "^19.2.0",
     "react-dom": "^19.2.0"
@@ -17,6 +19,7 @@
   "devDependencies": {
     "@types/react": "^19.2.0",
     "@types/react-dom": "^19.2.0",
+    "playwright": "^1.65.1",
     "typescript": "^5.9.0",
     "vite": "^7.2.0"
   },

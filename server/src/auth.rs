@@ -429,7 +429,7 @@ mod tests {
             status: "Todo".into(),
             priority: "Medium".into(),
             assignee: "Me".into(),
-            labels: String::new(),
+            ..Fields::default()
         })
     }
 
