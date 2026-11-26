@@ -7,7 +7,8 @@ Sync Line is a personal issue tracker. Sign in with an email code to open a priv
 - `web/` contains the React app, shared UI, and homepage preview data.
 - `server/` contains the Axum API and PostgreSQL migrations.
 - `desktop/` is reserved for the planned Tauri client.
-- The [product plan](docs/PLAN.md) tracks the solo workflow and later releases.
+
+We track Sync Line’s own development in its Engineering workspace. Open **Backlog** for planned work. ENG-14 records the completed solo workflow and its acceptance checks. ENG-15 records the MCP server and Agent tab milestone.
 
 ## Run locally
 
