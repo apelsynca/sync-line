@@ -183,7 +183,7 @@ test("scrolling a long conversation keeps navigation and the reply box in place"
     sessionStorage.setItem("sync-line:test:agent-chat", JSON.stringify(messages));
   });
   await page.route("**/api/workspaces/test/issues", (route) => route.fulfill({ json: [] }));
-  for (const width of [1280, 360]) {
+  for (const width of [1800, 360]) {
     await page.setViewportSize({ width, height: 720 });
     await page.goto(server.resolvedUrls!.local[0] + "app/agent");
     const log = page.getByRole("log");
@@ -194,6 +194,7 @@ test("scrolling a long conversation keeps navigation and the reply box in place"
       el.scrollTop > 0 && el.scrollTop + el.clientHeight >= el.scrollHeight - 1,
     );
     expect(atBottom).toBe(true);
+    expect(await log.evaluate((el) => el.getBoundingClientRect().right)).toBe(width);
     const sidebarBounds = await sidebar.boundingBox();
     const inputBounds = await input.boundingBox();
     await log.hover();

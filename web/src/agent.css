@@ -199,24 +199,33 @@
   color: #99999e;
   font-size: 0.82rem;
 }
+.workspace:has(.agent-panel.chatting) {
+  padding-right: 0;
+}
+.agent-main:has(.agent-panel.chatting) {
+  border-right: 0;
+  border-top-right-radius: 0;
+  border-bottom-right-radius: 0;
+}
 .chatting .agent-body {
+  --chat-inset: max(clamp(0.75rem, 1.5cqw, 1.5rem), calc((100cqw - 76rem) / 2));
   display: flex;
   justify-content: center;
   align-items: stretch;
-  padding: 0 clamp(0.75rem, 1.5cqw, 1.5rem) 0.85rem;
+  padding: 0 0 0.85rem;
   overflow: hidden;
 }
 .chatting .agent-column {
   display: flex;
   flex-direction: column;
-  width: min(100%, 76rem);
+  width: 100%;
 }
 .agent-history {
   flex: 1;
   min-height: 0;
   overflow-y: auto;
   overscroll-behavior-y: contain;
-  padding-block: 0.7rem 1.5rem;
+  padding: 0.7rem var(--chat-inset) 1.5rem;
   overflow-wrap: anywhere;
   font-size: 1.05rem;
   line-height: 1.5;
@@ -262,6 +271,7 @@
   outline: 1px solid var(--muted);
 }
 .chatting .agent-composer {
+  margin-inline: var(--chat-inset);
   flex: none;
   padding: 0.85rem;
   background: #1e1e1f;
@@ -280,7 +290,7 @@
   opacity: 1;
 }
 .chatting .agent-column > p {
-  margin: 0.4rem 0 0;
+  margin: 0.4rem var(--chat-inset) 0;
 }
 @container (max-width: 38rem) {
   .agent-cards {
