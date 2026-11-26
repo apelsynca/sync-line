@@ -434,6 +434,58 @@ mod tests {
     }
 
     #[sqlx::test]
+    async fn concurrent_comments_survive_retries_and_issue_edits(pool: PgPool) {
+        use crate::{Comment, post_comment};
+
+        let (workspace, session) = sign_in(&pool, "comment@example.test").await;
+        let parent = (workspace, Uuid::new_v4());
+        let _ = save(
+            State(pool.clone()),
+            Path(parent),
+            session.clone(),
+            issue("Discuss"),
+        )
+        .await
+        .unwrap();
+        let post = |id, body: &str| {
+            post_comment(
+                State(pool.clone()),
+                Path((workspace, parent.1, id)),
+                session.clone(),
+                Json(Comment {
+                    body: body.into(),
+                    created_at: 1000,
+                }),
+            )
+        };
+        let first = Uuid::new_v4();
+        let second = Uuid::new_v4();
+        let (a, b) = tokio::join!(post(first, "First"), post(second, "Second"));
+        a.unwrap();
+        b.unwrap();
+        post(first, "Retried").await.unwrap();
+        let _ = save(
+            State(pool.clone()),
+            Path(parent),
+            session.clone(),
+            issue("Updated"),
+        )
+        .await
+        .unwrap();
+        let (_, reader) = sign_in(&pool, "comment@example.test").await;
+        let response = crate::issues(State(pool), Path(workspace), reader)
+            .await
+            .unwrap()
+            .into_response();
+        let rows: Value =
+            serde_json::from_slice(&to_bytes(response.into_body(), 10000).await.unwrap()).unwrap();
+        let comments = rows[0]["comments"].as_object().unwrap();
+        assert_eq!(comments.len(), 2);
+        assert_eq!(comments[&first.to_string()]["body"], "First");
+        assert_eq!(comments[&second.to_string()]["body"], "Second");
+    }
+
+    #[sqlx::test]
     async fn second_device_recovers_issues_and_retries_keep_the_number(pool: PgPool) {
         let email = "solo@example.test";
         let (account, first) = sign_in(&pool, email).await;

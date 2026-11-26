@@ -14,10 +14,12 @@ import {
 } from "./versions";
 
 export type { Fields } from "./versions";
+type Comment = { body: string; created_at: number };
 export type Issue = Fields & {
   id: string;
   number: number;
   versions?: Versions;
+  comments?: Record<string, Comment>;
 };
 type EditKey = { id: string; number: number; revision: string };
 type Edit = EditKey & { changes: Changes };
@@ -94,6 +96,34 @@ function pendingDeletes(account: string) {
     .map((key) => key.slice(prefix.length));
 }
 
+const commentPrefix = (account: string) => `sync-line:${account}:pending-comment:`;
+
+function pendingComments(account: string, issueId?: string) {
+  const prefix = commentPrefix(account) + (issueId ? issueId + ":" : "");
+  return Object.keys(localStorage)
+    .filter(key => key.startsWith(prefix))
+    .map(key => {
+      const [issue, id] = key.slice(commentPrefix(account).length).split(":");
+      const comment: Comment = JSON.parse(localStorage.getItem(key)!);
+      return { key, issue, id, comment };
+    });
+}
+
+export function postComment(account: string, issue: string, body: string) {
+  const key = commentPrefix(account) + issue + ":" + crypto.randomUUID();
+  localStorage.setItem(key, JSON.stringify({ body, created_at: estimatedTime(account) }));
+  window.dispatchEvent(new Event("workspace-edit"));
+}
+
+export function readComments(account: string, issue: Issue) {
+  const comments = new Map(Object.entries(issue.comments ?? {}).map(([id, comment]) =>
+    [id, { ...comment, id, pending: false }]));
+  for (const { id, comment } of pendingComments(account, issue.id)) {
+    if (!comments.has(id)) comments.set(id, { ...comment, id, pending: true });
+  }
+  return [...comments.values()].sort((a, b) => a.created_at - b.created_at || a.id.localeCompare(b.id));
+}
+
 export function deleteIssue(account: string, id: string) {
   localStorage.setItem(deletePrefix(account) + id, "1");
   window.dispatchEvent(new Event("workspace-edit"));
@@ -102,6 +132,7 @@ export function deleteIssue(account: string, id: string) {
 export function hasLocalChanges(account: string) {
   return (
     pendingDeletes(account).length > 0 ||
+    pendingComments(account).length > 0 ||
     pending(account, cloudIssues(account)).length > 0 ||
     localStorage.getItem(composerKey(account)) !== null
   );
@@ -306,6 +337,18 @@ export async function sync(account: string) {
       storeCloud(account, cloud);
     }
     if (activeAccount() !== account) return;
+    const uploads = pendingComments(account);
+    const cloudById = new Map(cloud.map((issue) => [issue.id, issue]));
+    for (const { issue, id, comment } of uploads) {
+      if (activeAccount() !== account) return;
+      const parent = cloudById.get(issue);
+      if (!parent || parent.comments?.[id]) continue;
+      try {
+        await request(endpoint + "/" + issue + "/comments/" + id, "PUT", comment);
+      } catch (error) {
+        if (!(error instanceof RequestError) || error.status !== 404) throw error;
+      }
+    }
     const start = Date.now();
     const response = await request(endpoint);
     const serverTime = response.headers.get("x-sync-line-time");
@@ -316,9 +359,9 @@ export async function sync(account: string) {
       );
     const remote: Issue[] = await response.json();
     // An acknowledged edit would become pending again when its cached issue disappears.
-    const liveIds = new Set(remote.map((issue) => issue.id));
+    const remoteById = new Map(remote.map((issue) => [issue.id, issue]));
     for (const issue of cloud) {
-      if (!liveIds.has(issue.id))
+      if (!remoteById.has(issue.id))
         localStorage.removeItem(editPrefix(account) + issue.id);
     }
     const revisions = new Map(
@@ -331,5 +374,12 @@ export async function sync(account: string) {
         acknowledged: revisions.get(issue.id),
       })),
     );
+    // Keep the outbox until the downloaded copy is durable on this device.
+    for (const { key, issue, id } of uploads) {
+      const row = remoteById.get(issue);
+      if (row?.comments?.[id] || (!row && !localStorage.getItem(editPrefix(account) + issue))) {
+        localStorage.removeItem(key);
+      }
+    }
   });
 }

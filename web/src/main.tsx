@@ -34,6 +34,7 @@ import { RequestError } from "./api";
 import { Agent } from "./Agent";
 import { CommandMenu } from "./CommandMenu";
 import { FieldReview } from "./FieldReview";
+import { IssueComments } from "./IssueComments";
 import { IssueGroups } from "./IssueGroups";
 import { IssueLabelFilter, labelsMaxLength, matchesLabel } from "./IssueLabels";
 import {
@@ -592,6 +593,7 @@ function Editor({
 	return issue ? (
 		<>
 			{form}
+			<IssueComments key={issue.id} account={account} issue={issue} />
 			{confirmDelete && (
 				<Modal labelledBy="delete-issue-title" className="session-dialog delete-dialog" onDismiss={dismissDelete}>
 					<h2 id="delete-issue-title">Delete ENG-{issue.number}?</h2>

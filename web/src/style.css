@@ -720,3 +720,43 @@ aside .session-action {
 .command-menu [role="option"]:is(:hover, [aria-selected="true"]) {
   background: var(--control);
 }
+
+.issue-comments {
+  padding: 1rem;
+}
+.issue-comments h2 {
+  margin: 0 0 0.75rem;
+  font-size: 1rem;
+}
+.issue-comments ol {
+  padding: 0;
+  list-style: none;
+}
+.issue-comments li {
+  padding-block: 0.65rem;
+  border-bottom: 1px solid var(--line);
+}
+.issue-comments small {
+  color: var(--muted);
+}
+.issue-comments p {
+  margin: 0.25rem 0;
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+}
+.issue-comments form {
+  display: grid;
+  justify-items: start;
+  gap: 0.5rem;
+}
+.editor.issue-comments textarea {
+  width: 100%;
+  padding: 0.6rem;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: var(--surface);
+}
+.issue-comments :is(textarea, button):focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+}
