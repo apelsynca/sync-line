@@ -66,7 +66,22 @@ When a signed-in user leaves Sync Line and later opens `/`, return them directly
 | Activity and intake | Comments, activity history, inbox, live updates, triage, request forms, and customer requests. |
 | Planning and delivery | Cycles, estimates, sub-issues, dependencies, projects, milestones, documents, initiatives, roadmaps, and progress updates. |
 | Connected workflows | Import/export, public API, webhooks, GitHub pull requests and reviews, Slack, and release tracking. |
+| MCP server and Agent tab | Give external MCP clients and the in-app Agent access to the signed-in user’s issues. See the [milestone below](#mcp-server-and-agent-tab). |
 | Insights and administration | Dashboards, cycle and lead times, automation, AI-assisted triage, agent integrations, audit logs, and enterprise identity. |
 | Appearance and desktop | Add a light theme with a persistent appearance choice and check contrast and focus states across both palettes. Once the browser workflow is solid, reuse it in a Tauri shell with deep links, notifications, and keyboard shortcuts. |
 
 The longer-term feature roadmap draws on Linear’s issue tracking and planning tools. [Linear feature overview](https://linear.app/features) · [Linear documentation](https://linear.app/docs)
+
+### MCP server and Agent tab
+
+Expose Sync Line’s issue tools through a Model Context Protocol (MCP) server. Start with searching issues, reading an issue, creating one, and updating its fields. Bind each connection to the workspace its user authorized. Return permanent issue links and apply writes through the same validation and merge rules as browser edits.
+
+Add **Agent** to the workspace sidebar. Use the supplied [Agent tab screenshot](references/agent-tab.png) as the visual reference. The selected tab opens a dark panel with a **New chat** menu at the top. Center a wide composer in the available panel, with a faint Sync Line mark behind it, an **Ask Sync Line…** placeholder, an add-context button, and an upward-arrow send button. Place **Connect Git provider** directly below the composer, followed by a dismissible row of three example cards. Each card has an icon, a title, and a short description. Keep the composer usable on narrow screens and stack the cards when the row no longer fits.
+
+Start with prompts the issue tools can answer, such as **Create an issue**, **Research the backlog**, and **Find my active issues**. Selecting a card fills the composer so the user can edit the request before sending. The add-context button lets the user attach a workspace issue. After sending, show the conversation and link to the issues the Agent used or changed. Issue-only conversations work without a Git connection. Enable the provider connection action when the Git integration is available.
+
+**Acceptance checks.**
+
+- Connect an MCP client to one account, discover the issue tools, create an issue, and open its returned link in the browser. Update its status from the client and verify the change syncs. A request for an issue belonging to a second account must neither disclose nor change it.
+- Open **Agent** in a wide workspace and compare the empty chat to the reference. At a narrow width, verify the composer, send button, and examples remain reachable. Dismiss the examples and send a question with an issue attached.
+- With Git disconnected, select **Research the backlog**, edit the prompt, and send it. Follow an issue link in the response and verify it opens the matching workspace issue.
