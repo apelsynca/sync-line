@@ -73,10 +73,15 @@ nav p {
   align-items: center;
   gap: 0.4rem;
 }
-.nav-issues {
+.nav-issues,
+aside .session-action {
   display: flex;
-  margin: 0.45rem 0 0 0.8rem;
+  width: 100%;
+  justify-content: flex-start;
+  margin: 0.45rem 0 0;
   padding: 0.35rem 0.65rem;
+}
+.nav-issues {
   border-radius: 7px;
   text-decoration: none;
 }
@@ -345,19 +350,13 @@ nav p {
     padding: 0.45rem;
   }
   aside {
-    display: flex;
-    flex-wrap: wrap;
-    align-items: center;
-    justify-content: space-between;
+    max-height: 32dvh;
   }
   aside nav {
     margin: 0;
   }
   aside nav > :is(p, .team) {
     display: none;
-  }
-  aside {
-    max-height: 32dvh;
   }
   .row {
     flex-wrap: wrap;
