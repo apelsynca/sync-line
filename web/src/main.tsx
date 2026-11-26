@@ -32,6 +32,8 @@ import { SignIn, SignInForm } from "./SignIn";
 import { emptyFields } from "./versions";
 import { SavedViews, type IssueFilters } from "./SavedViews";
 import { CommandMenu } from "./CommandMenu";
+import { IssueLink } from "./IssueLink";
+import { IssueBoard } from "./IssueBoard";
 import {
   issueStatuses,
   issueViews,
@@ -112,7 +114,7 @@ function IssueList({
   );
   const views: IssueView[] = preview
     ? ["active", "all"]
-    : ["active", "all", "mine", "backlog"];
+    : ["active", "all", "mine", "backlog", "board"];
   const visibleIssues = issues.filter(
     (issue) =>
       statuses.includes(issue.status) &&
@@ -208,56 +210,56 @@ function IssueList({
               : "No issues assigned to you."}
         </p>
       )}
-      {statuses.map((status) => {
-        const group = visibleIssues.filter((issue) => issue.status === status);
-        if (hideEmptyGroups && !group.length) return null;
-        return (
-          <details className="issue-group" key={status} open>
-            <summary>
-              <ChevronRight className="group-chevron" size={14} aria-hidden="true" />
-              <Status value={status} />
-              <span>{group.length}</span>
-            </summary>
-            <ul>
-              {group.map((issue) => {
-                const content = (
-                  <>
-                    <span className="identifier">ENG-{issue.number}</span>
-                    <StatusIcon value={status} />
-                    <strong className="issue-content">{issue.title}</strong>
-                    <Avatar name={issue.assignee} />
-                  </>
-                );
-                return (
-                  <li key={issue.id}>
-                    {preview ? (
-                      <div className="row">{content}</div>
-                    ) : (
-                      <a
-                        className="row"
-                        href={issuePath(issue.id)}
-                        draggable={false}
-                        onClick={(event) => {
-                          const selection = window.getSelection();
-                          if (
-                            event.detail > 0 &&
-                            selection &&
-                            !selection.isCollapsed &&
-                            event.currentTarget.contains(selection.anchorNode)
-                          )
-                            event.preventDefault();
-                        }}
-                      >
-                        {content}
-                      </a>
-                    )}
-                  </li>
-                );
-              })}
-            </ul>
-          </details>
-        );
-      })}
+      {view === "board" && account ? (
+        <IssueBoard
+          account={account}
+          issues={visibleIssues}
+          statuses={statusFilter === anyStatus ? statuses : [statusFilter]}
+        />
+      ) : (
+        statuses.map((status) => {
+          const group = visibleIssues.filter(
+            (issue) => issue.status === status,
+          );
+          if (hideEmptyGroups && !group.length) return null;
+          return (
+            <details className="issue-group" key={status} open>
+              <summary>
+                <ChevronRight
+                  className="group-chevron"
+                  size={14}
+                  aria-hidden="true"
+                />
+                <Status value={status} />
+                <span>{group.length}</span>
+              </summary>
+              <ul>
+                {group.map((issue) => {
+                  const content = (
+                    <>
+                      <span className="identifier">ENG-{issue.number}</span>
+                      <StatusIcon value={status} />
+                      <strong className="issue-content">{issue.title}</strong>
+                      <Avatar name={issue.assignee} />
+                    </>
+                  );
+                  return (
+                    <li key={issue.id}>
+                      {preview ? (
+                        <div className="row">{content}</div>
+                      ) : (
+                        <IssueLink className="row" id={issue.id}>
+                          {content}
+                        </IssueLink>
+                      )}
+                    </li>
+                  );
+                })}
+              </ul>
+            </details>
+          );
+        })
+      )}
     </section>
   );
 }
@@ -834,7 +836,8 @@ root.addEventListener("select", (event) => {
       input.setSelectionRange(input.selectionEnd, input.selectionEnd);
   } else {
     const selection = window.getSelection();
-    if (selection?.rangeCount && selection.toString()) selection.collapseToEnd();
+    if (selection?.rangeCount && selection.toString())
+      selection.collapseToEnd();
   }
 });
 createRoot(root).render(<App />);

@@ -5,13 +5,17 @@ export const issueViews = {
   all: { label: "All issues", statuses: issueStatuses },
   mine: { label: "My issues", statuses: issueStatuses },
   backlog: { label: "Backlog", statuses: ["Backlog"] },
+  board: { label: "Board", statuses: issueStatuses },
 };
 
 export type IssueView = keyof typeof issueViews;
 
 export function viewFromSearch(search: string): IssueView {
   const view = new URLSearchParams(search).get("view");
-  return view === "active" || view === "mine" || view === "backlog"
+  return view === "active" ||
+    view === "mine" ||
+    view === "backlog" ||
+    view === "board"
     ? view
     : "all";
 }

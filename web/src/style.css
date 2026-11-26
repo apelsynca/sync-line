@@ -349,6 +349,73 @@ a.row:hover {
   background: var(--accent);
   color: var(--canvas);
 }
+.issue-board {
+  display: grid;
+  grid-auto-flow: column;
+  grid-auto-columns: minmax(min(16rem, 85%), 1fr);
+  gap: 0.6rem;
+  padding: 0.8rem;
+  overflow-x: auto;
+}
+.board-column {
+  min-width: 0;
+  min-height: 15rem;
+  padding: 0.5rem;
+  background: var(--panel);
+  border: 1px solid var(--line);
+  border-radius: 8px;
+}
+.board-column[data-target="true"] {
+  border-color: var(--accent);
+}
+.board-column h3,
+.card-properties {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.4rem;
+}
+.board-column h3 {
+  margin: 0 0 0.55rem;
+  padding: 0.15rem;
+  font-size: 0.9rem;
+  font-weight: 500;
+}
+.board-column h3 > span:last-child,
+.card-properties {
+  color: var(--muted);
+  font-size: 0.8rem;
+}
+.board-card {
+  margin-bottom: 0.45rem;
+  padding: 0.65rem;
+  border: 1px solid var(--line);
+  border-radius: 7px;
+  background: var(--surface);
+  cursor: grab;
+}
+.board-card a {
+  display: grid;
+  gap: 0.2rem;
+  text-decoration: none;
+}
+.board-card a:hover strong {
+  text-decoration: underline;
+}
+.board-card .identifier {
+  font-size: 0.75rem;
+}
+.board-card strong {
+  overflow-wrap: anywhere;
+  font-weight: 500;
+}
+.card-properties {
+  flex-wrap: wrap;
+  margin-top: 0.8rem;
+}
+.board-error {
+  margin: 0.8rem;
+}
 .auth {
   width: min(27rem, 100%);
   margin: 10vh auto;

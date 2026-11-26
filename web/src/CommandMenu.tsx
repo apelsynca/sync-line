@@ -66,6 +66,7 @@ export function CommandMenu({
       go("Active issues", viewPath("active"));
       go("My issues", viewPath("mine"));
       go("Backlog", viewPath("backlog"));
+      go("Board", viewPath("board"));
       if (term) {
         for (const issue of issues) {
           go(`ENG-${issue.number} ${issue.title}`, issuePath(issue.id));
