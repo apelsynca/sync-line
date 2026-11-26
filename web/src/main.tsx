@@ -23,6 +23,7 @@ import {
 	SignalLow,
 	SignalMedium,
 	Tag,
+	Trash2,
 	UserRound,
 	X,
 } from "lucide-react";
@@ -51,6 +52,7 @@ import {
 	agentPath,
 	composerKey,
 	createIssue,
+	deleteIssue,
 	type Fields,
 	type Issue,
 	issuePath,
@@ -429,6 +431,25 @@ function Editor({
 						{issue ? "ENG-" + issue.number : "New issue"}
 					</h1>
 					<div className="editor-tools">
+						{issue && (
+							<button
+								type="button"
+								className="editor-tool"
+								aria-label="Delete issue"
+								title="Delete issue"
+								onClick={() => {
+									if (!window.confirm(`Permanently delete ENG-${issue.number} “${draft.title}”?`)) return;
+									try {
+										deleteIssue(account, issue.id);
+										location.replace("/app");
+									} catch {
+										setFeedback("Couldn't save the deletion on this device. Try again.");
+									}
+								}}
+							>
+								<Trash2 size={16} aria-hidden="true" />
+							</button>
+						)}
 						{!issue && (
 							<button
 								type="button"

@@ -30,6 +30,7 @@ type CloudIssue = Issue & { acknowledged?: string };
 
 const cloudKey = (account: string) => `sync-line:${account}:cloud`;
 const editPrefix = (account: string) => `sync-line:${account}:edit:`;
+const deletePrefix = (account: string) => `sync-line:${account}:delete:`;
 const offsetKey = (account: string) => `sync-line:${account}:clock-offset`;
 const lastPageKey = (account: string) => `sync-line:${account}:last-page`;
 export const composerKey = (account: string) => `sync-line:${account}:composer`;
@@ -86,8 +87,21 @@ function pending(account: string, cloud: CloudIssue[]) {
     .filter((edit) => edit.revision !== acknowledged.get(edit.id));
 }
 
+function pendingDeletes(account: string) {
+  const prefix = deletePrefix(account);
+  return Object.keys(localStorage)
+    .filter((key) => key.startsWith(prefix))
+    .map((key) => key.slice(prefix.length));
+}
+
+export function deleteIssue(account: string, id: string) {
+  localStorage.setItem(deletePrefix(account) + id, "1");
+  window.dispatchEvent(new Event("workspace-edit"));
+}
+
 export function hasLocalChanges(account: string) {
   return (
+    pendingDeletes(account).length > 0 ||
     pending(account, cloudIssues(account)).length > 0 ||
     localStorage.getItem(composerKey(account)) !== null
   );
@@ -123,6 +137,7 @@ export function readIssues(account: string): Issue[] {
   const issues = new Map(cloud.map((issue) => [issue.id, issue]));
   for (const edit of pending(account, cloud))
     issues.set(edit.id, overlay(issues.get(edit.id), edit));
+  for (const id of pendingDeletes(account)) issues.delete(id);
   return [...issues.values()].sort((a, b) => a.number - b.number);
 }
 
@@ -238,6 +253,15 @@ export async function sync(account: string) {
     if (activeAccount() !== account) return;
     const endpoint = "/api/workspaces/" + account + "/issues";
     const cloud = cloudIssues(account);
+    for (const id of pendingDeletes(account)) {
+      if (activeAccount() !== account) return;
+      await request(endpoint + "/" + id, "DELETE");
+      const index = cloud.findIndex((row) => row.id === id);
+      if (index >= 0) cloud.splice(index, 1);
+      storeCloud(account, cloud);
+      localStorage.removeItem(editPrefix(account) + id);
+      localStorage.removeItem(deletePrefix(account) + id);
+    }
     const outbox = pending(account, cloud).map((stored) => {
       if ("changes" in stored) return stored;
       const edit = upgradeEdit(

@@ -73,6 +73,36 @@ async fn call(app: &Router, secret: &str, name: &str, args: Value) -> Value {
 }
 
 #[sqlx::test]
+async fn browser_deletion_before_first_upload_survives_retries(pool: PgPool) {
+    let (workspace, cookie) = account(&pool).await;
+    let id = Uuid::new_v4();
+    let app = axum::Router::new()
+        .route(
+            "/api/workspaces/{workspace}/issues/{id}",
+            axum::routing::delete(crate::delete),
+        )
+        .with_state(pool.clone());
+    for _ in 0..2 {
+        let request = Request::delete(format!("/api/workspaces/{workspace}/issues/{id}"))
+            .header(header::COOKIE, &cookie)
+            .body(Body::empty())
+            .unwrap();
+        assert_eq!(
+            app.clone().oneshot(request).await.unwrap().status(),
+            StatusCode::NO_CONTENT
+        );
+    }
+    let late_upload = write_issue(
+        &pool,
+        workspace,
+        id,
+        Write::Legacy(crate::Fields::default()),
+    )
+    .await;
+    assert!(matches!(late_upload, Err((StatusCode::GONE, _))));
+}
+
+#[sqlx::test]
 async fn tools_share_browser_writes_and_retries_preserve_issue_identity(pool: PgPool) {
     let (id, cookie) = account(&pool).await;
     let app = routes(&pool, &"http://localhost:5173".parse().unwrap())

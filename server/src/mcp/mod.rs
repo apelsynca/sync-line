@@ -280,17 +280,17 @@ impl IssueTools {
         &self,
         Parameters(input): Parameters<IssueId>,
     ) -> Result<CallToolResult, String> {
-        let number: i32 = sqlx::query_scalar(
-            "UPDATE issues SET deleted=true, title='', description='', labels='', position='',
-             versions='{}', status='Todo', priority='No priority', assignee=''
-             WHERE workspace_id=$1 AND request_id=$2 AND NOT deleted RETURNING number",
+        let number = write_issue(
+            &self.pool,
+            self.workspace,
+            input.id,
+            Write::Delete {
+                require_existing: true,
+            },
         )
-        .bind(self.workspace)
-        .bind(input.id)
-        .fetch_optional(&self.pool)
         .await
-        .map_err(|e| db_error(e).1)?
-        .ok_or("Issue not found.")?;
+        .map_err(|e| e.1)?
+        .number;
         Ok(CallToolResult::structured(
             json!({"id": input.id, "number": number, "deleted": true}),
         ))

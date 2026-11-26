@@ -90,6 +90,7 @@ struct Patch {
 enum Write {
     Patch(Patch),
     Legacy(Fields),
+    Delete { require_existing: bool },
     Create(BTreeMap<Field, String>),
     Update(BTreeMap<Field, String>),
     Import { number: i32, fields: Fields },
@@ -134,6 +135,16 @@ async fn write_issue_in(
     .fetch_optional(&mut **tx)
     .await
     .map_err(db_error)?;
+    if let Write::Delete { require_existing } = &write {
+        match current.as_ref() {
+            Some(issue) if issue.deleted && !require_existing => return Ok(current.unwrap()),
+            None if *require_existing => return Err((StatusCode::NOT_FOUND, "Issue not found.")),
+            Some(issue) if issue.deleted => {
+                return Err((StatusCode::NOT_FOUND, "Issue not found."));
+            }
+            _ => {}
+        }
+    }
     if current.as_ref().is_some_and(|issue| issue.deleted) && !matches!(write, Write::Import { .. })
     {
         return Err((StatusCode::GONE, "Issue has been deleted."));
@@ -149,7 +160,7 @@ async fn write_issue_in(
     let preferred = match &write {
         Write::Patch(patch) => patch.number,
         Write::Import { number, .. } => *number,
-        Write::Legacy(_) | Write::Create(_) | Write::Update(_) => next,
+        Write::Legacy(_) | Write::Create(_) | Write::Update(_) | Write::Delete { .. } => next,
     };
     let creating = current.is_none();
     let mut issue = current.unwrap_or_else(|| Issue {
@@ -173,6 +184,17 @@ async fn write_issue_in(
         }
     }
     let changes = match write {
+        Write::Delete { .. } => {
+            // Keep a tombstone even if an offline issue's first upload arrives after deletion.
+            issue.deleted = true;
+            issue.fields = Fields {
+                status: "Todo".into(),
+                priority: "No priority".into(),
+                ..Fields::default()
+            };
+            issue.versions.clear();
+            Changes::new()
+        }
         Write::Patch(patch) => {
             if patch.number <= 0
                 || patch.changes.is_empty()
@@ -225,12 +247,12 @@ async fn write_issue_in(
         issue.fields.value_mut(key).clone_from(&heads[0].value);
     }
     let f = &issue.fields;
-    sqlx::query("INSERT INTO issues(workspace_id, request_id, number, title, description, status, priority, assignee, versions, labels, position)
-        VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11) ON CONFLICT(workspace_id,request_id) DO UPDATE SET
+    sqlx::query("INSERT INTO issues(workspace_id, request_id, number, title, description, status, priority, assignee, versions, labels, position, deleted)
+        VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12) ON CONFLICT(workspace_id,request_id) DO UPDATE SET
         title=excluded.title, description=excluded.description, status=excluded.status,
-        priority=excluded.priority, assignee=excluded.assignee, versions=excluded.versions, labels=excluded.labels, position=excluded.position")
+        priority=excluded.priority, assignee=excluded.assignee, versions=excluded.versions, labels=excluded.labels, position=excluded.position, deleted=excluded.deleted")
         .bind(workspace).bind(id).bind(issue.number).bind(&f.title).bind(&f.description).bind(&f.status)
-        .bind(&f.priority).bind(&f.assignee).bind(DbJson(&issue.versions)).bind(&f.labels).bind(&f.position).execute(&mut **tx).await.map_err(db_error)?;
+        .bind(&f.priority).bind(&f.assignee).bind(DbJson(&issue.versions)).bind(&f.labels).bind(&f.position).bind(issue.deleted).execute(&mut **tx).await.map_err(db_error)?;
     if creating && issue.number == next {
         sqlx::query("UPDATE workspaces SET next_number=(
             SELECT min(i.number::bigint+1) FROM issues i WHERE i.workspace_id=$1 AND i.number >= $2
@@ -238,6 +260,24 @@ async fn write_issue_in(
         ) WHERE id=$1").bind(workspace).bind(next).execute(&mut **tx).await.map_err(db_error)?;
     }
     Ok(issue)
+}
+
+async fn delete(
+    State(pool): State<PgPool>,
+    Path((workspace, id)): Path<(Uuid, Uuid)>,
+    headers: HeaderMap,
+) -> Result<StatusCode, ApiError> {
+    auth::authorize(&pool, &headers, workspace).await?;
+    write_issue(
+        &pool,
+        workspace,
+        id,
+        Write::Delete {
+            require_existing: false,
+        },
+    )
+    .await?;
+    Ok(StatusCode::NO_CONTENT)
 }
 
 async fn patch(
@@ -280,7 +320,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         .route("/api/workspaces/{workspace}/issues", get(issues))
         .route(
             "/api/workspaces/{workspace}/issues/{id}",
-            put(save).patch(patch),
+            put(save).patch(patch).delete(delete),
         )
         .layer(DefaultBodyLimit::max(8 * 1024 * 1024))
         .with_state(pool);
