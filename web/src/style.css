@@ -310,10 +310,6 @@ aside .session-action {
 .actions [role="status"] {
   margin-right: auto;
 }
-.create-issue {
-  background: #5e6ad2;
-  color: white;
-}
 .create-more {
   color: var(--muted);
   cursor: pointer;

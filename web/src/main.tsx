@@ -584,7 +584,7 @@ function Editor({
 							</button>
 						</>
 					)}
-					{!issue && <button className="create-issue">Create issue</button>}
+					{!issue && <button type="submit">Create issue</button>}
 					{issue && !draft.title.trim() && (
 						<span>Enter a title to sync this issue.</span>
 					)}
