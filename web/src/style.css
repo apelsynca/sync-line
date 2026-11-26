@@ -158,6 +158,39 @@ nav p {
 .row .person {
   margin-left: auto;
 }
+.issue-labels,
+.labels-editor {
+  display: flex;
+  align-items: center;
+  gap: 0.35rem;
+  min-width: 0;
+}
+.issue-labels {
+  flex-wrap: wrap;
+  color: var(--muted);
+  font-size: 0.76rem;
+}
+.issue-labels > span {
+  padding: 0.1rem 0.45rem;
+  border: 1px solid var(--line);
+  border-radius: 1rem;
+  overflow-wrap: anywhere;
+}
+.labels-editor {
+  margin-top: 0.75rem;
+  color: var(--muted);
+  font-size: 0.85rem;
+}
+.labels-editor input,
+.field-review input {
+  min-width: 0;
+  flex: 1;
+  padding: 0.4rem;
+  border: 1px solid var(--line);
+  border-radius: 5px;
+  color: var(--ink);
+  background: var(--surface);
+}
 a.row:hover {
   background: var(--control);
   border-radius: 7px;

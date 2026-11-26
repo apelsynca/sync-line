@@ -13,6 +13,7 @@ import {
   SignalLow,
   SignalMedium,
   SignalHigh,
+  Tag,
   UserRound,
   X,
 } from "lucide-react";
@@ -34,6 +35,7 @@ import { SavedViews, type IssueFilters } from "./SavedViews";
 import { CommandMenu } from "./CommandMenu";
 import { IssueLink } from "./IssueLink";
 import { IssueBoard } from "./IssueBoard";
+import { IssueLabels, labelsMaxLength } from "./IssueLabels";
 import {
   issueStatuses,
   issueViews,
@@ -124,7 +126,8 @@ function IssueList({
       (!term ||
         `eng-${issue.number}`.includes(term) ||
         issue.title.toLowerCase().includes(term) ||
-        issue.description.toLowerCase().includes(term)),
+        issue.description.toLowerCase().includes(term) ||
+        issue.labels.toLowerCase().includes(term)),
   );
   return (
     <section
@@ -193,7 +196,7 @@ function IssueList({
             <input
               className="issue-search"
               type="search"
-              aria-label="Search issues by number, title, or description"
+              aria-label="Search issues by number, title, description, or label"
               placeholder="Search issues"
               value={query}
               onChange={(event) => updateFilters({ query: event.target.value })}
@@ -240,6 +243,7 @@ function IssueList({
                       <span className="identifier">ENG-{issue.number}</span>
                       <StatusIcon value={status} />
                       <strong className="issue-content">{issue.title}</strong>
+                      <IssueLabels value={issue.labels} />
                       <Avatar name={issue.assignee} />
                     </>
                   );
@@ -287,6 +291,7 @@ function Home() {
         <IssueList
           issues={seeds.map((fields, index) => ({
             ...fields,
+            labels: "",
             id: String(index),
             number: index + 1,
           }))}
@@ -366,6 +371,7 @@ function Editor({
           draft.status,
           draft.priority,
           draft.assignee || "Unassigned",
+          draft.labels,
         ].join("\n"),
       );
       setFeedback("Draft copied. Retry to save it on this device.");
@@ -526,6 +532,24 @@ function Editor({
             </Fragment>
           ))}
         </div>
+        <label className="labels-editor">
+          <Tag size={15} aria-hidden="true" /> Labels
+          <input
+            className="issue-content"
+            placeholder="Separate labels with commas"
+            value={draft.labels}
+            maxLength={labelsMaxLength}
+            onChange={(event) => persist({ labels: event.target.value })}
+          />
+        </label>
+        {issue && (
+          <FieldReview
+            account={account}
+            issue={issue}
+            field="labels"
+            disabled={writeFailed}
+          />
+        )}
         <div className="actions">
           <span role="status">{feedback}</span>
           {!issue && (

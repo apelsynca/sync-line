@@ -13,9 +13,11 @@ pub enum Field {
     Status,
     Assignee,
     Priority,
+    Labels,
 }
 
-pub const FIELDS: [Field; 5] = [
+// Older offline clients create and replace issues using these five fields.
+pub const ORIGINAL_FIELDS: [Field; 5] = [
     Field::Title,
     Field::Description,
     Field::Status,
@@ -31,6 +33,7 @@ impl Fields {
             Field::Status => &mut self.status,
             Field::Assignee => &mut self.assignee,
             Field::Priority => &mut self.priority,
+            Field::Labels => &mut self.labels,
         }
     }
 }
@@ -55,6 +58,7 @@ impl Version {
             Field::Status => ["Backlog", "Todo", "In progress", "Done"].contains(&value),
             Field::Assignee => ["", "Me"].contains(&value),
             Field::Priority => ["No priority", "Low", "Medium", "High"].contains(&value),
+            Field::Labels => value.chars().count() <= 500 && !value.contains(['\r', '\n']),
         };
         if !valid
             || value.contains('\0')

@@ -21,7 +21,7 @@ export type Issue = Fields & {
 };
 type EditKey = { id: string; number: number; revision: string };
 type Edit = EditKey & { changes: Changes };
-type StoredEdit = Edit | (EditKey & Fields);
+type StoredEdit = Edit | (EditKey & Omit<Fields, "labels"> & { labels?: string });
 type CloudIssue = Issue & { acknowledged?: string };
 
 const cloudKey = (account: string) => `sync-line:${account}:cloud`;
@@ -59,7 +59,10 @@ export function lastWorkspacePage(account: string) {
 }
 
 function cloudIssues(account: string): CloudIssue[] {
-  return JSON.parse(localStorage.getItem(cloudKey(account)) ?? "[]");
+  const rows: CloudIssue[] = JSON.parse(
+    localStorage.getItem(cloudKey(account)) ?? "[]",
+  );
+  return rows.map((issue) => ({ ...issue, labels: issue.labels ?? "" }));
 }
 
 function pending(account: string, cloud: CloudIssue[]) {
@@ -82,7 +85,12 @@ export function hasLocalChanges(account: string) {
 
 function overlay(base: CloudIssue | undefined, edit: StoredEdit): Issue {
   if (!("changes" in edit))
-    return { ...base, ...edit, number: base?.number ?? edit.number };
+    return {
+      ...emptyFields,
+      ...base,
+      ...edit,
+      number: base?.number ?? edit.number,
+    };
   const versions = { ...base?.versions };
   const fields = { ...emptyFields, ...base };
   for (const key of fieldNames) {
@@ -125,9 +133,10 @@ function upgradeEdit(account: string, edit: StoredEdit, cloud?: Issue): Edit {
   const changes: Changes = {};
   const time = estimatedTime(account);
   for (const key of fieldNames) {
-    if (edit[key] !== cloud?.[key]) {
+    const value = edit[key];
+    if (value !== undefined && value !== cloud?.[key]) {
       changes[key] = newVersion(
-        edit[key],
+        value,
         cloud?.versions?.[key] ?? [],
         edit.revision,
         time,

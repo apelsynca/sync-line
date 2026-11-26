@@ -3,6 +3,7 @@ import { Avatar, PropertySelect, Status, StatusIcon } from "@sync-line/ui";
 import { issueStatuses } from "./issueViews";
 import { saveIssue, type Issue } from "./workspace";
 import { IssueLink } from "./IssueLink";
+import { IssueLabels } from "./IssueLabels";
 
 export function IssueBoard({
   account,
@@ -102,6 +103,7 @@ export function IssueBoard({
                     <IssueLink id={issue.id}>
                       <span className="identifier">ENG-{issue.number}</span>
                       <strong className="issue-content">{issue.title}</strong>
+                      <IssueLabels value={issue.labels} />
                     </IssueLink>
                     <div className="card-properties">
                       <PropertySelect

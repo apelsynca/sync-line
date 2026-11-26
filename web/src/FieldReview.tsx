@@ -3,6 +3,7 @@ import { History } from "lucide-react";
 import { Modal, PropertySelect } from "@sync-line/ui";
 import { saveIssue, type Issue } from "./workspace";
 import type { Field, Version } from "./versions";
+import { labelsMaxLength } from "./IssueLabels";
 
 export function FieldReview({
   account,
@@ -23,8 +24,7 @@ export function FieldReview({
   const [value, setValue] = useState("");
   const [error, setError] = useState("");
   const inputId = useId();
-  const contentClass =
-    field === "title" || field === "description" ? "issue-content" : undefined;
+  const contentClass = options ? undefined : "issue-content";
   const heads = issue.versions?.[field] ?? [];
   if (!review && !heads.some((head) => head.value !== heads[0].value))
     return null;
@@ -92,6 +92,14 @@ export function FieldReview({
               options={options}
               icon={icon}
               onChange={setValue}
+            />
+          ) : field === "labels" ? (
+            <input
+              className="issue-content"
+              id={inputId}
+              value={value}
+              maxLength={labelsMaxLength}
+              onChange={(e) => setValue(e.target.value)}
             />
           ) : (
             <textarea

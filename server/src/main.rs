@@ -3,7 +3,7 @@ mod demo;
 mod mail;
 mod merge;
 
-use merge::{Changes, FIELDS, Versions};
+use merge::{Changes, ORIGINAL_FIELDS, Versions};
 
 use axum::{
     Json, Router,
@@ -25,6 +25,8 @@ struct Fields {
     status: String,
     assignee: String,
     priority: String,
+    #[serde(default)]
+    labels: String,
 }
 
 #[derive(Serialize, sqlx::FromRow)]
@@ -157,7 +159,10 @@ async fn write_issue_in(
         Write::Patch(patch) => {
             if patch.number <= 0
                 || patch.changes.is_empty()
-                || (creating && patch.changes.len() != FIELDS.len())
+                || (creating
+                    && ORIGINAL_FIELDS
+                        .iter()
+                        .any(|key| !patch.changes.contains_key(key)))
             {
                 return Err((StatusCode::BAD_REQUEST, "Missing issue fields or number."));
             }
@@ -165,7 +170,7 @@ async fn write_issue_in(
         }
         Write::Legacy(mut fields) | Write::Import { mut fields, .. } => {
             let mut changes = Changes::new();
-            for key in FIELDS {
+            for key in ORIGINAL_FIELDS {
                 let value = fields.value_mut(key);
                 if creating || issue.fields.value_mut(key) != value {
                     let parents = issue
@@ -189,12 +194,12 @@ async fn write_issue_in(
         issue.fields.value_mut(key).clone_from(&heads[0].value);
     }
     let f = &issue.fields;
-    sqlx::query("INSERT INTO issues(workspace_id, request_id, number, title, description, status, priority, assignee, versions)
-        VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9) ON CONFLICT(workspace_id,request_id) DO UPDATE SET
+    sqlx::query("INSERT INTO issues(workspace_id, request_id, number, title, description, status, priority, assignee, versions, labels)
+        VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10) ON CONFLICT(workspace_id,request_id) DO UPDATE SET
         title=excluded.title, description=excluded.description, status=excluded.status,
-        priority=excluded.priority, assignee=excluded.assignee, versions=excluded.versions")
+        priority=excluded.priority, assignee=excluded.assignee, versions=excluded.versions, labels=excluded.labels")
         .bind(workspace).bind(id).bind(issue.number).bind(&f.title).bind(&f.description).bind(&f.status)
-        .bind(&f.priority).bind(&f.assignee).bind(DbJson(&issue.versions)).execute(&mut **tx).await.map_err(db_error)?;
+        .bind(&f.priority).bind(&f.assignee).bind(DbJson(&issue.versions)).bind(&f.labels).execute(&mut **tx).await.map_err(db_error)?;
     if creating && issue.number == next {
         sqlx::query("UPDATE workspaces SET next_number=(
             SELECT min(i.number::bigint+1) FROM issues i WHERE i.workspace_id=$1 AND i.number >= $2
@@ -264,6 +269,46 @@ mod tests {
             writer,
             clock: [(writer, 1)].into(),
         }
+    }
+
+    #[sqlx::test]
+    async fn legacy_replacement_preserves_labels_and_their_version(pool: PgPool) {
+        let workspace = Uuid::new_v4();
+        let id = Uuid::new_v4();
+        sqlx::query("INSERT INTO workspaces VALUES ($1,1)")
+            .bind(workspace)
+            .execute(&pool)
+            .await
+            .unwrap();
+        let legacy = |title: &str| {
+            Write::Legacy(Fields {
+                title: title.into(),
+                status: "Todo".into(),
+                priority: "Low".into(),
+                ..Fields::default()
+            })
+        };
+        write_issue(&pool, workspace, id, legacy("Original"))
+            .await
+            .unwrap();
+        let labels = edit("design, mobile", Uuid::new_v4());
+        write_issue(
+            &pool,
+            workspace,
+            id,
+            Write::Patch(Patch {
+                number: 1,
+                changes: [(Field::Labels, labels.clone())].into(),
+            }),
+        )
+        .await
+        .unwrap();
+        let result = write_issue(&pool, workspace, id, legacy("Updated"))
+            .await
+            .unwrap();
+        assert_eq!(result.fields.title, "Updated");
+        assert_eq!(result.fields.labels, "design, mobile");
+        assert_eq!(result.versions[&Field::Labels], [labels]);
     }
 
     #[sqlx::test]
