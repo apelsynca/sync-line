@@ -17,6 +17,7 @@ import {
 	LogIn,
 	Maximize2,
 	Minimize2,
+	MousePointer2,
 	Plus,
 	SignalHigh,
 	SignalLow,
@@ -29,6 +30,7 @@ import { type FormEvent, Fragment, useEffect, useRef, useState } from "react";
 import { createRoot } from "react-dom/client";
 import seeds from "../shared/demo-v1.json";
 import { RequestError } from "./api";
+import { Agent } from "./Agent";
 import { CommandMenu } from "./CommandMenu";
 import { FieldReview } from "./FieldReview";
 import { IssueGroups } from "./IssueGroups";
@@ -46,6 +48,7 @@ import { SignOutButton } from "./SignOutButton";
 import { activeAccount, watchSession } from "./session";
 import { emptyFields } from "./versions";
 import {
+	agentPath,
 	composerKey,
 	createIssue,
 	type Fields,
@@ -664,8 +667,11 @@ function Workspace({
 				<nav aria-label="Your workspace">
 					<p>Your workspace</p>
 					<Team />
-					<a href="/app" className="nav-issues">
+					<a href="/app" className="nav-issues" aria-current={path !== agentPath ? "location" : undefined}>
 						<ListTodo size={16} aria-hidden="true" /> Issues
+					</a>
+					<a href={agentPath} className="nav-issues" aria-current={path === agentPath ? "page" : undefined}>
+						<MousePointer2 size={16} aria-hidden="true" /> Agent
 					</a>
 					<CommandMenu
 						issues={issues}
@@ -679,7 +685,7 @@ function Workspace({
 					writeFailed={writeFailed || composerWriteFailed}
 				/>
 			</aside>
-			<main>
+			<main className={path === agentPath ? "agent-main" : undefined}>
 				{expired && (
 					<button
 						type="button"
@@ -706,7 +712,9 @@ function Workspace({
 						/>
 					</Modal>
 				)}
-				{path === "/app" || path === newIssuePath ? (
+				{path === agentPath ? (
+					<Agent account={account} issues={issues} />
+				) : path === "/app" || path === newIssuePath ? (
 					issues.length ? (
 						<IssueList
 							account={account}

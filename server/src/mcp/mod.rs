@@ -1,3 +1,4 @@
+mod agent;
 mod tokens;
 
 use std::{collections::BTreeMap, sync::Arc};
@@ -49,7 +50,7 @@ pub fn routes(pool: &PgPool, origin: &str) -> Result<Router<PgPool>, Box<dyn std
             url.port_or_known_default().unwrap()
         )]);
     let pool = pool.clone();
-    Ok(tokens::routes().route(
+    Ok(tokens::routes().merge(agent::routes(&origin)?).route(
         "/api/mcp",
         any(move |request: Request| {
             let pool = pool.clone();
@@ -98,6 +99,11 @@ struct Search {
     /// Case-insensitive text in ENG number, title, description, or labels. Omit to list all issues.
     #[serde(default)]
     query: String,
+    /// Limit results to these statuses (Backlog, Todo, In progress, Done).
+    #[serde(default)]
+    statuses: Vec<String>,
+    /// Me, or an empty string for Unassigned. Omit for all assignees.
+    assignee: Option<String>,
     /// Continue after the last issue number returned in next_after.
     #[serde(default)]
     after: u32,
@@ -191,11 +197,14 @@ impl IssueTools {
             "SELECT request_id, number, title, status FROM issues WHERE workspace_id=$1 AND number > $2::bigint
              AND (strpos(lower('ENG-' || number), lower($3)) > 0 OR strpos(lower(title), lower($3)) > 0
              OR strpos(lower(description), lower($3)) > 0 OR strpos(lower(labels), lower($3)) > 0)
+             AND (cardinality($4::text[]) = 0 OR status = ANY($4)) AND ($5::text IS NULL OR assignee = $5)
              ORDER BY number LIMIT 51",
         )
         .bind(self.workspace)
         .bind(i64::from(input.after))
         .bind(input.query.trim())
+        .bind(input.statuses)
+        .bind(input.assignee)
         .fetch_all(&self.pool)
         .await
         .map_err(|e| db_error(e).1)?;

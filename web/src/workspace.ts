@@ -35,6 +35,7 @@ const lastPageKey = (account: string) => `sync-line:${account}:last-page`;
 export const composerKey = (account: string) => `sync-line:${account}:composer`;
 export const issuePath = (id: string) => "/app/issues/" + id;
 export const newIssuePath = issuePath("new");
+export const agentPath = "/app/agent";
 
 export function rememberWorkspacePage(account: string) {
   if (document.visibilityState !== "visible") return;
@@ -42,7 +43,7 @@ export function rememberWorkspacePage(account: string) {
   if (path === newIssuePath) return;
   let page = "/app";
   if (path === "/app") page = viewPath(viewFromSearch(location.search));
-  else if (path.startsWith("/app/issues/")) page = path;
+  else if (path === agentPath || path.startsWith("/app/issues/")) page = path;
   try {
     localStorage.setItem(lastPageKey(account), page);
   } catch {
@@ -52,6 +53,7 @@ export function rememberWorkspacePage(account: string) {
 
 export function lastWorkspacePage(account: string) {
   const page = localStorage.getItem(lastPageKey(account));
+  if (page === agentPath) return page;
   if (page?.startsWith("/app?")) return viewPath(viewFromSearch(page.slice(4)));
   if (
     page?.startsWith("/app/issues/") &&

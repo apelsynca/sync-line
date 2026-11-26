@@ -6,7 +6,7 @@ use axum::{
 };
 use tower::ServiceExt;
 
-async fn account(pool: &PgPool) -> (Uuid, String) {
+pub(super) async fn account(pool: &PgPool) -> (Uuid, String) {
     let id = Uuid::new_v4();
     let session = Uuid::new_v4();
     sqlx::query("INSERT INTO workspaces(id) VALUES ($1)")
@@ -29,7 +29,7 @@ async fn account(pool: &PgPool) -> (Uuid, String) {
     (id, format!("sync_line_session={session}"))
 }
 
-async fn json_body(response: Response) -> Value {
+pub(super) async fn json_body(response: Response) -> Value {
     serde_json::from_slice(&to_bytes(response.into_body(), 1_000_000).await.unwrap()).unwrap()
 }
 

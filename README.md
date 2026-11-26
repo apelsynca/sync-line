@@ -51,6 +51,20 @@ Each workspace has one active token. It grants read and write access to synced i
 
 The endpoint is `/api/mcp`. Set `APP_ORIGIN` in `server/.env` to the browser app’s public origin for permanent links and HTTP origin checks. The default is `http://localhost:5173`. For a hosted deployment, serve the app over HTTPS and forward `/api` to the Rust server.
 
+## Use the Agent tab
+
+Configure a model that supports tool calling through the OpenAI-compatible Chat Completions API. Add these settings to `server/.env` and restart the API.
+
+```dotenv
+AGENT_BASE_URL=https://api.openai.com/v1
+AGENT_MODEL=your-model-id
+AGENT_API_KEY=your-provider-key
+```
+
+Set the base URL to your provider’s API root, including any version prefix. The server appends `/chat/completions`. The key is optional for a local provider that accepts unauthenticated requests.
+
+Open **Agent** in the workspace sidebar. Edit an example or type a request, attach an issue with **+**, and press Enter to send. Shift+Enter adds a line. The server sends the conversation, attached issue, and requested issue-tool results to the configured provider. Agent can search, read, create, and update issues using your signed-in session. Responses link back to the issues it used. The current conversation stays in this browser tab when you follow a link. **New chat** starts a fresh conversation. Git integration is planned.
+
 ## Check the offline workflow
 
 Keep the API running. Build and serve the production client so the service worker can cache the app for offline navigation.
