@@ -1,3 +1,4 @@
+use crate::config::MailConfig;
 use lettre::{AsyncSmtpTransport, AsyncTransport, Message, Tokio1Executor, message::Mailbox};
 use std::{
     error::Error,
@@ -18,13 +19,10 @@ pub struct Smtp {
 }
 
 impl MailTransport {
-    pub fn configured() -> Result<Self, Box<dyn Error>> {
-        match dotenvy::var("MAIL_TRANSPORT").as_deref() {
-            Ok("logger") => Ok(Self::Logger),
-            Ok("smtp") => {
-                let url = dotenvy::var("SMTP_URL").unwrap_or_else(|_| "smtp://localhost:25".into());
-                let from =
-                    dotenvy::var("MAIL_FROM").unwrap_or_else(|_| "sync-line@localhost".into());
+    pub fn new(config: MailConfig) -> Result<Self, Box<dyn Error>> {
+        match config {
+            MailConfig::Logger => Ok(Self::Logger),
+            MailConfig::Smtp { url, from } => {
                 let transport = AsyncSmtpTransport::<Tokio1Executor>::from_url(&url)?
                     .timeout(Some(Duration::from_secs(10)))
                     .build();
@@ -33,7 +31,6 @@ impl MailTransport {
                     from: from.parse()?,
                 })))
             }
-            _ => Err("Set MAIL_TRANSPORT to logger or smtp.".into()),
         }
     }
 

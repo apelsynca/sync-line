@@ -18,7 +18,7 @@ createdb sync_line
 bun install --cwd web --frozen-lockfile
 ```
 
-Set the database connection and mail transport in `server/.env`.
+Set the database connection and mail transport in `server/.env`. For a fresh setup, copy [server/.env.example](server/.env.example) to `server/.env`.
 
 ```dotenv
 DATABASE_URL=postgresql:///sync_line
@@ -57,11 +57,11 @@ Configure a model that supports tool calling through the OpenAI-compatible Chat 
 
 ```dotenv
 AGENT_BASE_URL=https://api.openai.com/v1
-AGENT_MODEL=your-model-id
+AGENT_MODEL=gpt-4.1-mini
 AGENT_API_KEY=your-provider-key
 ```
 
-Set the base URL to your provider’s API root, including any version prefix. The server appends `/chat/completions`. The key is optional for a local provider that accepts unauthenticated requests.
+For OpenAI, fill in your API key and choose a tool-calling model available to your account. `AGENT_BASE_URL` defaults to the OpenAI URL above. For another provider, set its API root including any version prefix and its exact model ID. The server appends `/chat/completions`. You can omit `AGENT_API_KEY` for a local endpoint that accepts unauthenticated requests. Leave `AGENT_MODEL` unset to run the issue tracker with chat disabled.
 
 Open **Agent** in the workspace sidebar. Edit an example or type a request, attach an issue with **+**, and press Enter to send. Shift+Enter adds a line. The server sends the conversation, attached issue, and requested issue-tool results to the configured provider. Agent can search, read, create, and update issues using your signed-in session. Responses link back to the issues it used. The current conversation stays in this browser tab when you follow a link. **New chat** starts a fresh conversation. Git integration is planned.
 

@@ -1,4 +1,5 @@
 mod auth;
+mod config;
 mod demo;
 mod mail;
 mod mcp;
@@ -261,15 +262,14 @@ async fn save(
 
 #[tokio::main]
 async fn main() -> Result<(), Box<dyn std::error::Error>> {
-    let mail = mail::MailTransport::configured()?;
-    let pool = PgPool::connect(&dotenvy::var("DATABASE_URL")?).await?;
+    let config = config::Config::from_env()?;
+    let mail = mail::MailTransport::new(config.mail)?;
+    let pool = PgPool::connect(&config.database_url).await?;
     sqlx::migrate!().run(&pool).await?;
     let app = Router::new()
         .merge(auth::routes(mail))
-        .merge(mcp::routes(
-            &pool,
-            &dotenvy::var("APP_ORIGIN").unwrap_or_else(|_| "http://localhost:5173".into()),
-        )?)
+        .merge(mcp::routes(&pool, &config.app_origin))
+        .merge(mcp::agent::routes(&config.app_origin, config.agent)?)
         .route("/api/workspaces/{workspace}/issues", get(issues))
         .route(
             "/api/workspaces/{workspace}/issues/{id}",
@@ -277,8 +277,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         )
         .layer(DefaultBodyLimit::max(8 * 1024 * 1024))
         .with_state(pool);
-    let address = dotenvy::var("BIND_ADDR").unwrap_or_else(|_| "127.0.0.1:3000".into());
-    let listener = tokio::net::TcpListener::bind(address).await?;
+    let listener = tokio::net::TcpListener::bind(config.bind_addr).await?;
     println!("Sync Line listening on http://{}", listener.local_addr()?);
     axum::serve(listener, app).await?;
     Ok(())

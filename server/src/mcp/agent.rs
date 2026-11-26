@@ -1,5 +1,5 @@
 use super::{Create, IssueId, IssueTools};
-use crate::{ApiError, auth};
+use crate::{ApiError, auth, config::AgentConfig};
 use axum::{
     Extension, Json, Router,
     extract::{Path, State},
@@ -32,19 +32,18 @@ struct Provider {
     origin: String,
 }
 
-pub(super) fn routes(origin: &str) -> Result<Router<PgPool>, reqwest::Error> {
-    let base =
-        dotenvy::var("AGENT_BASE_URL").unwrap_or_else(|_| "https://api.openai.com/v1".into());
+pub(crate) fn routes(
+    origin: &url::Url,
+    config: AgentConfig,
+) -> Result<Router<PgPool>, reqwest::Error> {
     let provider = Provider {
         client: Client::builder()
             .redirect(reqwest::redirect::Policy::none())
             .build()?,
-        endpoint: format!("{}/chat/completions", base.trim_end_matches('/')),
-        model: dotenvy::var("AGENT_MODEL")
-            .ok()
-            .filter(|s| !s.trim().is_empty()),
-        key: dotenvy::var("AGENT_API_KEY").ok().filter(|s| !s.is_empty()),
-        origin: origin.into(),
+        endpoint: format!("{}/chat/completions", config.base_url.trim_end_matches('/')),
+        model: config.model,
+        key: config.api_key,
+        origin: origin.origin().ascii_serialization(),
     };
     Ok(Router::new().route(
         "/api/workspaces/{workspace}/agent",

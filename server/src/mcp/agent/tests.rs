@@ -47,10 +47,7 @@ async fn chat_uses_scoped_tools_and_returns_permanent_issue_references(pool: PgP
     let hidden = private["id"].clone();
 
     let listener = tokio::net::TcpListener::bind("127.0.0.1:0").await.unwrap();
-    let endpoint = format!(
-        "http://{}/v1/chat/completions",
-        listener.local_addr().unwrap()
-    );
+    let base_url = format!("http://{}/v1/", listener.local_addr().unwrap());
     let mock = Router::new().route(
         "/v1/chat/completions",
         post(move |headers: HeaderMap, Json(body): Json<Value>| {
@@ -90,18 +87,13 @@ async fn chat_uses_scoped_tools_and_returns_permanent_issue_references(pool: PgP
         }),
     );
     let task = tokio::spawn(async move { axum::serve(listener, mock).await.unwrap() });
-    let provider = Provider {
-        client: Client::new(),
+    let config = AgentConfig {
+        base_url,
         model: Some("test-model".into()),
-        endpoint,
-        key: Some("sample-key".into()),
-        origin: "http://localhost".into(),
+        api_key: Some("sample-key".into()),
     };
-    let app = Router::new()
-        .route(
-            "/api/workspaces/{workspace}/agent",
-            post(chat).layer(Extension(provider)),
-        )
+    let app = routes(&"http://localhost".parse().unwrap(), config)
+        .unwrap()
         .with_state(pool);
     let mut body =
         json!({"request_id":Uuid::new_v4(),"prompt":"Follow up on this","issue_id":attached["id"]});

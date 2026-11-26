@@ -1,4 +1,4 @@
-mod agent;
+pub(crate) mod agent;
 mod tokens;
 
 use std::{collections::BTreeMap, sync::Arc};
@@ -26,18 +26,8 @@ use uuid::Uuid;
 
 use crate::{Field, Issue, Write, db_error, write_issue};
 
-pub fn routes(pool: &PgPool, origin: &str) -> Result<Router<PgPool>, Box<dyn std::error::Error>> {
-    let url = url::Url::parse(origin)?;
-    if !matches!(url.scheme(), "https" | "http")
-        || url.path() != "/"
-        || url.query().is_some()
-        || url.fragment().is_some()
-        || !url.username().is_empty()
-        || url.password().is_some()
-    {
-        return Err("APP_ORIGIN must be the browser app's HTTP(S) origin.".into());
-    }
-    let host = url.host_str().ok_or("APP_ORIGIN requires a host.")?;
+pub fn routes(pool: &PgPool, url: &url::Url) -> Router<PgPool> {
+    let host = url.host_str().expect("validated APP_ORIGIN has a host");
     let origin = url.origin().ascii_serialization();
     let config = StreamableHttpServerConfig::default()
         .with_legacy_session_mode(false)
@@ -50,7 +40,7 @@ pub fn routes(pool: &PgPool, origin: &str) -> Result<Router<PgPool>, Box<dyn std
             url.port_or_known_default().unwrap()
         )]);
     let pool = pool.clone();
-    Ok(tokens::routes().merge(agent::routes(&origin)?).route(
+    tokens::routes().route(
         "/api/mcp",
         any(move |request: Request| {
             let pool = pool.clone();
@@ -83,7 +73,7 @@ pub fn routes(pool: &PgPool, origin: &str) -> Result<Router<PgPool>, Box<dyn std
                 service.handle(request).await.into_response()
             }
         }),
-    ))
+    )
 }
 
 #[derive(Clone)]

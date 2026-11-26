@@ -75,8 +75,7 @@ async fn call(app: &Router, secret: &str, name: &str, args: Value) -> Value {
 #[sqlx::test]
 async fn tools_share_browser_writes_and_retries_preserve_issue_identity(pool: PgPool) {
     let (id, cookie) = account(&pool).await;
-    let app = routes(&pool, "http://localhost:5173")
-        .unwrap()
+    let app = routes(&pool, &"http://localhost:5173".parse().unwrap())
         .route(
             "/api/workspaces/{workspace}/issues",
             axum::routing::get(crate::issues),
@@ -147,9 +146,7 @@ async fn tools_share_browser_writes_and_retries_preserve_issue_identity(pool: Pg
 async fn workspace_tokens_isolate_accounts_and_revoke_immediately(pool: PgPool) {
     let (a, owner) = account(&pool).await;
     let (b, other) = account(&pool).await;
-    let app = routes(&pool, "https://example.test")
-        .unwrap()
-        .with_state(pool);
+    let app = routes(&pool, &"https://example.test".parse().unwrap()).with_state(pool);
     for method in [Method::GET, Method::POST, Method::DELETE] {
         assert_eq!(
             token_request(&app, a, &other, method).await.status(),
