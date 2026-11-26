@@ -31,7 +31,6 @@ import seeds from "../shared/demo-v1.json";
 import { SignIn, SignInForm } from "./SignIn";
 import { emptyFields } from "./versions";
 import { FieldReview } from "./FieldReview";
-import { Teammates } from "./Teammates";
 import { SignOutButton } from "./SignOutButton";
 import { RequestError } from "./api";
 import { activeAccount, watchSession } from "./session";
@@ -68,7 +67,7 @@ function IssueList({
   return (
     <section
       className="list-card"
-      aria-label={preview ? "Demo workspace preview" : "Team issues"}
+      aria-label={preview ? "Demo workspace preview" : "Workspace issues"}
     >
       <div className="list-head">
         <Team />
@@ -142,7 +141,7 @@ function Home() {
         <Brand />
       </header>
       <div className="hero">
-        <p className="eyebrow">Team issue tracking</p>
+        <p className="eyebrow">Personal issue tracking</p>
         <h1>
           A clear line from
           <br />
@@ -318,7 +317,7 @@ function Editor({
               <a
                 className="editor-tool"
                 href="/app"
-                aria-label="Back to team issues"
+                aria-label="Back to issues"
               >
                 <X size={17} aria-hidden="true" />
               </a>
@@ -507,14 +506,13 @@ function Workspace({
     <div className="workspace">
       <aside>
         <Brand />
-        <nav aria-label="Your teams">
-          <p>Your teams</p>
+        <nav aria-label="Your workspace">
+          <p>Your workspace</p>
           <Team />
           <a href="/app" className="nav-issues">
             <ListTodo size={16} aria-hidden="true" /> Issues
           </a>
         </nav>
-        <Teammates workspace={account} />
         <SignOutButton
           account={account}
           writeFailed={writeFailed || composerWriteFailed}
@@ -573,7 +571,7 @@ function Workspace({
         ) : (
           <>
             <h1>Issue not found</h1>
-            <a href="/app">Back to team issues</a>
+            <a href="/app">Back to issues</a>
           </>
         )}
       </main>

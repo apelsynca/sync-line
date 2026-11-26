@@ -2,7 +2,6 @@ mod auth;
 mod demo;
 mod mail;
 mod merge;
-mod teammates;
 
 use merge::{Changes, FIELDS, Versions};
 
@@ -59,7 +58,7 @@ async fn issues(
     Path(workspace): Path<Uuid>,
     headers: HeaderMap,
 ) -> Result<impl axum::response::IntoResponse, ApiError> {
-    auth::authorize_owner(&pool, &headers, workspace).await?;
+    auth::authorize(&pool, &headers, workspace).await?;
     let issues = sqlx::query_as::<_, Issue>(
         "SELECT request_id AS id, * FROM issues WHERE workspace_id=$1 ORDER BY number",
     )
@@ -211,7 +210,7 @@ async fn patch(
     headers: HeaderMap,
     Json(patch): Json<Patch>,
 ) -> Result<Json<Issue>, ApiError> {
-    auth::authorize_owner(&pool, &headers, workspace).await?;
+    auth::authorize(&pool, &headers, workspace).await?;
     Ok(Json(
         write_issue(&pool, workspace, id, Write::Patch(patch)).await?,
     ))
@@ -224,7 +223,7 @@ async fn save(
     headers: HeaderMap,
     Json(fields): Json<Fields>,
 ) -> Result<Json<i32>, ApiError> {
-    auth::authorize_owner(&pool, &headers, workspace).await?;
+    auth::authorize(&pool, &headers, workspace).await?;
     Ok(Json(
         write_issue(&pool, workspace, id, Write::Legacy(fields))
             .await?
@@ -238,8 +237,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     let pool = PgPool::connect(&dotenvy::var("DATABASE_URL")?).await?;
     sqlx::migrate!().run(&pool).await?;
     let app = Router::new()
-        .merge(auth::routes(mail.clone()))
-        .merge(teammates::routes(mail))
+        .merge(auth::routes(mail))
         .route("/api/workspaces/{workspace}/issues", get(issues))
         .route(
             "/api/workspaces/{workspace}/issues/{id}",

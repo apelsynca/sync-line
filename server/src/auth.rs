@@ -38,7 +38,7 @@ struct Account {
     id: Uuid,
 }
 
-pub fn normalize(email: &str) -> Result<String, ApiError> {
+fn normalize(email: &str) -> Result<String, ApiError> {
     let email = email.trim().to_ascii_lowercase();
     let valid = email.split_once('@').is_some_and(|(local, domain)| {
         !local.is_empty()
@@ -222,26 +222,23 @@ async fn sign_out(
     Ok(response)
 }
 
-pub async fn authorize_owner(
+pub async fn authorize(
     pool: &PgPool,
     headers: &HeaderMap,
     workspace: Uuid,
-) -> Result<String, ApiError> {
+) -> Result<(), ApiError> {
     let token = cookie_uuid(headers, "sync_line_session").ok_or(UNAUTHORIZED)?;
-    sqlx::query_scalar(
-        "SELECT accounts.email FROM sessions JOIN accounts USING (workspace_id)
-        WHERE digest=sha256(uuid_send($1)) AND workspace_id=$2 AND expires_at > now()",
-    )
-    .bind(token)
-    .bind(workspace)
-    .fetch_optional(pool)
-    .await
-    .map_err(db_error)?
-    .ok_or(UNAUTHORIZED)
+    let authorized: bool = sqlx::query_scalar("SELECT EXISTS (SELECT 1 FROM sessions WHERE digest=sha256(uuid_send($1)) AND workspace_id=$2 AND expires_at > now())")
+        .bind(token).bind(workspace).fetch_one(pool).await.map_err(db_error)?;
+    if authorized {
+        Ok(())
+    } else {
+        Err(UNAUTHORIZED)
+    }
 }
 
 #[cfg(test)]
-pub(crate) mod tests {
+mod tests {
     use super::*;
     use crate::{Fields, save};
     use axum::{body::to_bytes, extract::Path};
@@ -260,7 +257,7 @@ pub(crate) mod tests {
         .await
     }
 
-    pub(crate) async fn sign_in(pool: &PgPool, email: &str) -> (Uuid, HeaderMap) {
+    async fn sign_in(pool: &PgPool, email: &str) -> (Uuid, HeaderMap) {
         issue_code(pool, email, "03124567").await.unwrap();
         let response = redeem(pool, email, "03124567").await.unwrap();
         let mut headers = HeaderMap::new();
@@ -421,11 +418,8 @@ pub(crate) mod tests {
                     .contains("Max-Age=0")
             );
         }
-        assert_eq!(
-            authorize_owner(&pool, &first, account).await,
-            Err(UNAUTHORIZED)
-        );
-        authorize_owner(&pool, &second, account).await.unwrap();
+        assert_eq!(authorize(&pool, &first, account).await, Err(UNAUTHORIZED));
+        authorize(&pool, &second, account).await.unwrap();
     }
 
     fn issue(title: &str) -> Json<Fields> {
@@ -502,7 +496,7 @@ pub(crate) mod tests {
             UNAUTHORIZED
         );
         assert_eq!(
-            authorize_owner(&pool, &other, account).await.unwrap_err(),
+            authorize(&pool, &other, account).await.unwrap_err(),
             UNAUTHORIZED
         );
     }
