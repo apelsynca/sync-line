@@ -1,12 +1,13 @@
 import { PropertySelect } from "@sync-line/ui";
 import {
   ArrowUp,
+  Check,
   ChevronDown,
+  Copy,
   FilePlus2,
   GitFork,
   ListTodo,
   MessageSquarePlus,
-  MousePointer2,
   Plus,
   Search,
   X,
@@ -43,6 +44,7 @@ type Message = {
   role: "user" | "assistant";
   content: string;
   issues: IssueRef[];
+  sentAt?: number;
 };
 
 function loadChat(key: string): Message[] {
@@ -53,6 +55,45 @@ function loadChat(key: string): Message[] {
   }
 }
 
+function ChatTime({ sentAt }: { sentAt: number }) {
+  const date = new Date(sentAt);
+  const day = date.toDateString() === new Date().toDateString()
+    ? "Today"
+    : date.toLocaleDateString(undefined, { dateStyle: "medium" });
+  return (
+    <time className="agent-time" dateTime={date.toISOString()}>
+      {day} {date.toLocaleTimeString(undefined, { timeStyle: "short" })}
+    </time>
+  );
+}
+
+function CopyReply({ content }: { content: string }) {
+  const [feedback, setFeedback] = useState("");
+  useEffect(() => {
+    if (!feedback) return;
+    const timer = window.setTimeout(() => setFeedback(""), 2000);
+    return () => clearTimeout(timer);
+  }, [feedback]);
+
+  async function copy() {
+    try {
+      await navigator.clipboard.writeText(content);
+      setFeedback("Copied");
+    } catch {
+      setFeedback("Couldn't copy reply");
+    }
+  }
+
+  return (
+    <div className="agent-reply-actions">
+      <button type="button" className="editor-tool" onClick={copy} aria-label="Copy reply" title="Copy reply">
+        {feedback === "Copied" ? <Check size={15} /> : <Copy size={15} />}
+      </button>
+      <span role="status">{feedback}</span>
+    </div>
+  );
+}
+
 function Transcript({
   messages,
   byId,
@@ -60,23 +101,29 @@ function Transcript({
   messages: Message[];
   byId: Map<string, Issue>;
 }) {
+  const log = useRef<HTMLDivElement>(null);
+  const following = useRef(true);
+  const last = messages.at(-1);
+  useEffect(() => {
+    const history = log.current;
+    if (history && (following.current || last?.role === "user")) {
+      history.scrollTop = history.scrollHeight;
+    }
+  }, [last]);
+
   return (
     <div
       className="agent-history issue-content"
+      ref={log}
+      onScroll={(event) => {
+        const history = event.currentTarget;
+        following.current = history.scrollHeight - history.scrollTop - history.clientHeight < 8;
+      }}
       role="log"
       aria-label="Conversation"
     >
       {messages.map((message, index) => (
-        <article key={index} className={message.role}>
-          <strong>
-            {message.role === "user" ? (
-              "You"
-            ) : (
-              <>
-                <MousePointer2 size={14} /> Sync Line
-              </>
-            )}
-          </strong>
+        <article key={index} className={message.role} aria-label={message.role === "user" ? "You" : "Sync Line"}>
           <p>{message.content}</p>
           {message.issues.length > 0 && (
             <ul>
@@ -90,6 +137,7 @@ function Transcript({
               })}
             </ul>
           )}
+          {message.role === "assistant" && <CopyReply content={message.content} />}
         </article>
       ))}
     </div>
@@ -119,6 +167,7 @@ export function Agent({
   );
   const attached = byId.get(issueId);
   const chatting = messages.length > 0 || !!pending;
+  const startedAt = (messages[0] ?? pending)?.sentAt;
 
   useEffect(() => {
     try {
@@ -149,6 +198,7 @@ export function Agent({
     const user: Message = {
       role: "user",
       content: prompt,
+      sentAt: Date.now(),
       issues: attached
         ? [{ id: attached.id, number: attached.number, title: attached.title }]
         : [],
@@ -199,8 +249,9 @@ export function Agent({
       aria-label="Agent"
     >
       <header className="agent-header">
-        <button type="button" popoverTarget="agent-menu" disabled={!!pending}>
-          New chat <ChevronDown size={14} />
+        {startedAt && <ChatTime sentAt={startedAt} />}
+        <button type="button" popoverTarget="agent-menu" disabled={!!pending} aria-label="New chat" title="New chat">
+          {chatting ? <MessageSquarePlus size={16} /> : <>New chat <ChevronDown size={14} /></>}
         </button>
         <div id="agent-menu" className="agent-menu" popover="auto" ref={menu}>
           <button onClick={startChat}>
@@ -231,7 +282,7 @@ export function Agent({
               ref={input}
               className="issue-content"
               aria-label="Ask Sync Line"
-              placeholder="Ask Sync Line…"
+              placeholder={chatting ? "Reply…" : "Ask Sync Line…"}
               maxLength={16000}
               rows={2}
               value={pending ? "" : draft}

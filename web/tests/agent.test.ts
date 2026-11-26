@@ -169,3 +169,40 @@ test("sync clears stale edits for deleted issues and uploads the next issue", as
   expect(await page.getByRole("link", { name: /Offline edit|Already synced/ }).count()).toBe(0);
   await page.close();
 });
+
+test("scrolling a long conversation keeps navigation and the reply box in place", async () => {
+  const page = await browser.newPage({
+    permissions: ["clipboard-read", "clipboard-write"],
+  });
+  await page.addInitScript(() => {
+    localStorage.setItem("sync-line:account", "test");
+    const messages = Array.from({ length: 20 }, (_, index) => [
+      { role: "user", content: `Question ${index}`, sentAt: Date.now(), issues: [] },
+      { role: "assistant", content: `Reply ${index}`, issues: [] },
+    ]).flat();
+    sessionStorage.setItem("sync-line:test:agent-chat", JSON.stringify(messages));
+  });
+  await page.route("**/api/workspaces/test/issues", (route) => route.fulfill({ json: [] }));
+  for (const width of [1280, 360]) {
+    await page.setViewportSize({ width, height: 720 });
+    await page.goto(server.resolvedUrls!.local[0] + "app/agent");
+    const log = page.getByRole("log");
+    const sidebar = page.getByRole("complementary");
+    const input = page.getByPlaceholder("Reply…");
+    await log.getByText("Reply 19", { exact: true }).waitFor();
+    const atBottom = await log.evaluate((el) =>
+      el.scrollTop > 0 && el.scrollTop + el.clientHeight >= el.scrollHeight - 1,
+    );
+    expect(atBottom).toBe(true);
+    const sidebarBounds = await sidebar.boundingBox();
+    const inputBounds = await input.boundingBox();
+    await log.hover();
+    await page.mouse.wheel(0, -8000);
+    await page.waitForFunction(() => document.querySelector('[role="log"]')?.scrollTop === 0);
+    expect(await sidebar.boundingBox()).toEqual(sidebarBounds);
+    expect(await input.boundingBox()).toEqual(inputBounds);
+    await log.getByRole("button", { name: "Copy reply" }).first().click();
+    expect(await page.evaluate(() => navigator.clipboard.readText())).toBe("Reply 0");
+  }
+  await page.close();
+}, 30000);
