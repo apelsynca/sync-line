@@ -7,7 +7,7 @@ Sync Line is a private issue tracker for one person’s day-to-day work. A user 
 | Area | Implemented |
 |---|---|
 | Homepage and workspace | The public preview contains four sample issues. Email-code sign-in opens a private personal workspace. A fresh workspace starts empty unless the browser has eligible work from the old demo. Sign-out closes the workspace across tabs, including offline. |
-| Issues | Users can create, assign to **Me** or leave **Unassigned**, and edit issues offline. In Active and All issues, users can filter by status and priority and search by issue number, title, or description, including offline. Bookmarks survive renumbering. Edits merge per field, with optional review of competing values. Sign-in imports user-created demo issues and edited samples. |
+| Issues | Users can create, assign to **Me** or leave **Unassigned**, and edit issues offline. My issues shows work assigned to **Me**, including completed issues. In My issues, Active, and All issues, users can filter by status and priority and search by issue number, title, or description, including offline. Bookmarks survive renumbering. Edits merge per field, with optional review of competing values. Sign-in imports user-created demo issues and edited samples. |
 | Storage and sync | The browser stores edits locally and sends them automatically. The production build caches the app for offline reopening. After session expiry the editor stays usable. Failed local writes keep the draft available to retry or copy. Demo imports preserve issue IDs and available numbers. |
 
 **Progress.** Release 1, step 1 passed in two Chromium profiles using a local test mailbox. The check included a browser restart offline, recovery after clearing local account data, keyboard and pointer input, and a narrow viewport. Step 2 passed in Chromium with offline sign-out, two accounts in the same browser, an expired session, and a simulated storage quota failure. Returning to the original account uploaded its pending edit once. Step 3 passed across two Chromium profiles, including colliding offline numbers, independent field edits, a one-hour device clock offset, equal edit times, and restoring or combining a competing value. Step 4 passed in Chromium using cookies from the retired demo. Fresh and existing accounts recovered the edited sample and user-created issue. The check covered an occupied ENG-5, a sample restored to its original values, and a second sign-in using the original cookie.
@@ -54,7 +54,7 @@ On sign-in from a browser with an existing demo cookie, import user-created issu
 
 | Milestone | Scope |
 |---|---|
-| Everyday issue tracking | Custom workflows, backlog, labels, boards with drag-and-drop between status columns, filters, saved views, My Issues, and a command menu. |
+| Everyday issue tracking | Custom workflows, backlog, labels, boards with drag-and-drop between status columns, filters, saved views, and a command menu. |
 | Activity and intake | Comments, activity history, inbox, live updates, triage, request forms, and customer requests. |
 | Planning and delivery | Cycles, estimates, sub-issues, dependencies, projects, milestones, documents, initiatives, roadmaps, and progress updates. |
 | Connected workflows | Import/export, public API, webhooks, GitHub pull requests and reviews, Slack, and release tracking. |

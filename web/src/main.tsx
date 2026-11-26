@@ -66,19 +66,21 @@ function IssueList({
   onCreate?: () => void;
 }) {
   const preview = !onCreate;
-  const [activeOnly, setActiveOnly] = useState(false);
+  const [view, setView] = useState<"active" | "all" | "mine">("all");
   const [query, setQuery] = useState("");
   const [statusFilter, setStatusFilter] = useState(anyStatus);
   const [priorityFilter, setPriorityFilter] = useState(anyPriority);
   const term = query.trim().toLowerCase();
   const filtered =
     Boolean(term) || statusFilter !== anyStatus || priorityFilter !== anyPriority;
+  const hideEmptyGroups = filtered || view === "mine";
   const statuses = properties.status.filter(
-    (status) => !activeOnly || status !== "Done",
+    (status) => view !== "active" || status !== "Done",
   );
   const visibleIssues = issues.filter(
     (issue) =>
       statuses.includes(issue.status) &&
+      (view !== "mine" || issue.assignee === "Me") &&
       (statusFilter === anyStatus || issue.status === statusFilter) &&
       (priorityFilter === anyPriority || issue.priority === priorityFilter) &&
       (!term ||
@@ -110,19 +112,22 @@ function IssueList({
       </div>
       <div className="list-filters" role="group" aria-label="Issue view">
         <button
-          aria-pressed={activeOnly}
+          aria-pressed={view === "active"}
           onClick={() => {
-            setActiveOnly(true);
+            setView("active");
             if (statusFilter === "Done") setStatusFilter(anyStatus);
           }}
         >
           Active
         </button>
-        <button aria-pressed={!activeOnly} onClick={() => setActiveOnly(false)}>
+        <button aria-pressed={view === "all"} onClick={() => setView("all")}>
           All issues
         </button>
         {!preview && (
           <>
+            <button aria-pressed={view === "mine"} onClick={() => setView("mine")}>
+              My issues
+            </button>
             <PropertySelect
               label="Filter by status"
               value={statusFilter}
@@ -146,14 +151,16 @@ function IssueList({
           </>
         )}
       </div>
-      {filtered && !visibleIssues.length && (
+      {hideEmptyGroups && !visibleIssues.length && (
         <p className="search-empty" role="status">
-          No matching issues in this view.
+          {filtered
+            ? "No matching issues in this view."
+            : "No issues assigned to you."}
         </p>
       )}
       {statuses.map((status) => {
         const group = visibleIssues.filter((issue) => issue.status === status);
-        if (filtered && !group.length) return null;
+        if (hideEmptyGroups && !group.length) return null;
         return (
           <details className="issue-group" key={status} open>
             <summary>
