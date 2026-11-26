@@ -203,10 +203,15 @@ async fn save(
 
 #[tokio::main]
 async fn main() -> Result<(), Box<dyn std::error::Error>> {
+    let mail = match dotenvy::var("MAIL_TRANSPORT").as_deref() {
+        Ok("logger") => auth::MailTransport::Logger,
+        Ok("smtp") => auth::MailTransport::Smtp,
+        _ => return Err("Set MAIL_TRANSPORT to logger or smtp.".into()),
+    };
     let pool = PgPool::connect(&dotenvy::var("DATABASE_URL")?).await?;
     sqlx::migrate!().run(&pool).await?;
     let app = Router::new()
-        .merge(auth::routes())
+        .merge(auth::routes(mail))
         .route("/api/workspaces/{workspace}/issues", get(issues))
         .route(
             "/api/workspaces/{workspace}/issues/{id}",

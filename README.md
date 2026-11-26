@@ -11,30 +11,21 @@ Sync Line is a personal issue tracker. Sign in with an email code to open a priv
 
 ## Run locally
 
-Use a current stable Rust toolchain, Bun 1.4.4, PostgreSQL, and a sendmail-compatible mail transport. From the repository root, create a database your PostgreSQL role can access and install the frontend dependencies.
+Use a current stable Rust toolchain, Bun 1.4.4, and PostgreSQL. From the repository root, create a database your PostgreSQL role can access and install the frontend dependencies.
 
 ```sh
 createdb sync_line
 bun install --cwd web --frozen-lockfile
 ```
 
-Set the connection string in `server/.env`. The API submits sign-in messages to `/usr/sbin/sendmail -i -t` by default. Set `SENDMAIL_PATH` to use another mail transport or a local development mail catcher that accepts a message on standard input.
+Set the database connection and mail transport in `server/.env`.
 
 ```dotenv
 DATABASE_URL=postgresql:///sync_line
+MAIL_TRANSPORT=logger
 ```
 
-For a local test without mail delivery, run the following in the API terminal before starting the server. Read the latest message in the temporary directory printed by `echo "$mail_dir"` after requesting a code.
-
-```sh
-mail_dir=$(mktemp -d)
-export SENDMAIL_PATH="$mail_dir/sendmail"
-cat > "$SENDMAIL_PATH" <<'SH'
-#!/bin/sh
-cat > "$(dirname "$0")/message"
-SH
-chmod 700 "$SENDMAIL_PATH"
-```
+With `logger`, request a sign-in code and read the eight digits next to your email address in the API terminal. Use this mode for local development. The other supported value, `smtp`, is a stub that accepts and discards messages. Restart the API after changing the setting.
 
 In separate terminals, start the API and the Vite development server.
 

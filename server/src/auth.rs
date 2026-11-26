@@ -1,6 +1,6 @@
 use crate::{ApiError, db_error};
 use axum::{
-    Json, Router,
+    Extension, Json, Router,
     extract::State,
     http::{HeaderMap, StatusCode, header},
     response::{IntoResponse, Response},
@@ -9,16 +9,31 @@ use axum::{
 use rand::{Rng, rngs::OsRng};
 use serde::{Deserialize, Serialize};
 use sqlx::PgPool;
-use std::{process::Stdio, time::Duration};
-use tokio::{io::AsyncWriteExt, process::Command, time::timeout};
+use std::io::{self, Write};
 use uuid::Uuid;
 
 const UNAUTHORIZED: ApiError = (StatusCode::UNAUTHORIZED, "Sign in to your workspace.");
 const INVALID_CODE: ApiError = (StatusCode::UNAUTHORIZED, "Invalid or expired code.");
 
-pub fn routes() -> Router<PgPool> {
+#[derive(Clone, Copy)]
+pub enum MailTransport {
+    Logger,
+    Smtp,
+}
+
+impl MailTransport {
+    fn deliver(self, email: &str, code: &str) -> io::Result<()> {
+        match self {
+            Self::Logger => writeln!(io::stdout().lock(), "Sign-in code for {email}: {code}"),
+            // Accept the message until SMTP delivery is implemented.
+            Self::Smtp => Ok(()),
+        }
+    }
+}
+
+pub fn routes(mail: MailTransport) -> Router<PgPool> {
     Router::new()
-        .route("/api/auth/code", post(request_code))
+        .route("/api/auth/code", post(request_code).layer(Extension(mail)))
         .route("/api/auth/verify", post(verify))
         .route("/api/auth/sign-out", post(sign_out))
 }
@@ -85,38 +100,16 @@ async fn issue_code(pool: &PgPool, email: &str, code: &str) -> Result<Uuid, ApiE
     Ok(nonce)
 }
 
-async fn deliver(email: &str, code: &str) -> std::io::Result<()> {
-    let command = dotenvy::var("SENDMAIL_PATH").unwrap_or_else(|_| "/usr/sbin/sendmail".into());
-    let mut mail = Command::new(command)
-        .args(["-i", "-t"])
-        .stdin(Stdio::piped())
-        .kill_on_drop(true)
-        .spawn()?;
-    let message = format!(
-        "To: {email}\nSubject: Your Sync Line sign-in code\n\nYour code is {code}. It expires in 10 minutes.\n"
-    );
-    mail.stdin
-        .take()
-        .unwrap()
-        .write_all(message.as_bytes())
-        .await?;
-    if !mail.wait().await?.success() {
-        return Err(std::io::Error::other("mail delivery failed"));
-    }
-    Ok(())
-}
-
 async fn request_code(
     State(pool): State<PgPool>,
+    Extension(mail): Extension<MailTransport>,
     Json(input): Json<EmailInput>,
 ) -> Result<StatusCode, ApiError> {
     let email = normalize(&input.email)?;
     let code = format!("{:08}", OsRng.gen_range(0..100_000_000u32));
     let nonce = issue_code(&pool, &email, &code).await?;
-    if !matches!(
-        timeout(Duration::from_secs(15), deliver(&email, &code)).await,
-        Ok(Ok(()))
-    ) {
+    if let Err(error) = mail.deliver(&email, &code) {
+        eprintln!("Could not deliver sign-in code: {error}");
         sqlx::query("DELETE FROM email_codes WHERE email=$1 AND nonce=$2")
             .bind(email)
             .bind(nonce)

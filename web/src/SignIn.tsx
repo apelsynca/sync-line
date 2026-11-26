@@ -63,9 +63,9 @@ export function SignInForm({
   return (
     <form onSubmit={submit}>
       <h1 id="sign-in-title">
-        {sent ? "Check your email" : "Sign in to your workspace"}
+        {sent ? "Enter your sign-in code" : "Sign in to your workspace"}
       </h1>
-      {sent && <p>Enter the eight-digit code sent to {email}.</p>}
+      {sent && <p>Enter the eight-digit code for {email}.</p>}
       {sent ? (
         <label>
           One-time code
@@ -122,7 +122,7 @@ export function SignInForm({
             Use another code
           </button>
         )}
-        <button disabled={busy}>{sent ? "Sign in" : "Email me a code"}</button>
+        <button disabled={busy}>{sent ? "Sign in" : "Request code"}</button>
       </div>
     </form>
   );
