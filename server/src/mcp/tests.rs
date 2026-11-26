@@ -80,6 +80,10 @@ async fn tools_share_browser_writes_and_retries_preserve_issue_identity(pool: Pg
             "/api/workspaces/{workspace}/issues",
             axum::routing::get(crate::issues),
         )
+        .route(
+            "/api/workspaces/{workspace}/issues/{id}",
+            axum::routing::patch(crate::patch),
+        )
         .with_state(pool);
     let issued = token_request(&app, id, &cookie, Method::POST).await;
     assert_eq!(issued.status(), StatusCode::CREATED);
@@ -96,7 +100,14 @@ async fn tools_share_browser_writes_and_retries_preserve_issue_identity(pool: Pg
         .collect();
     assert_eq!(
         names,
-        ["search_issues", "get_issue", "create_issue", "update_issue"].into()
+        [
+            "search_issues",
+            "get_issue",
+            "create_issue",
+            "update_issue",
+            "delete_issue"
+        ]
+        .into()
     );
 
     let issue_id = Uuid::new_v4();
@@ -132,14 +143,47 @@ async fn tools_share_browser_writes_and_retries_preserve_issue_identity(pool: Pg
     .await;
     assert_eq!(updated["structuredContent"]["status"], "Done");
     assert_eq!(updated["structuredContent"]["description"], "Keep this");
-    let req = Request::get(format!("/api/workspaces/{id}/issues"))
-        .header(header::COOKIE, cookie)
-        .body(Body::empty())
-        .unwrap();
-    let synced = json_body(app.oneshot(req).await.unwrap()).await;
+    let req = || {
+        Request::get(format!("/api/workspaces/{id}/issues"))
+            .header(header::COOKIE, &cookie)
+            .body(Body::empty())
+            .unwrap()
+    };
+    let synced = json_body(app.clone().oneshot(req()).await.unwrap()).await;
     assert_eq!(synced.as_array().unwrap().len(), 1);
     assert_eq!(synced[0]["versions"]["status"][0]["value"], "Done");
     assert_eq!(synced[0]["labels"], "Web");
+
+    let target = json!({"id":issue_id});
+    let deleted = call(&app, &token, "delete_issue", target.clone()).await;
+    assert_eq!(
+        deleted["structuredContent"],
+        json!({"id":issue_id,"number":1,"deleted":true})
+    );
+    for name in ["get_issue", "delete_issue"] {
+        assert_eq!(
+            call(&app, &token, name, target.clone()).await["isError"],
+            true
+        );
+    }
+    let retry = Request::patch(format!("/api/workspaces/{id}/issues/{issue_id}"))
+        .header(header::COOKIE, &cookie)
+        .header(header::CONTENT_TYPE, "application/json")
+        .body(Body::from(
+            json!({"number":1,"changes":{"status":synced[0]["versions"]["status"][0]}}).to_string(),
+        ))
+        .unwrap();
+    assert_eq!(
+        app.clone().oneshot(retry).await.unwrap().status(),
+        StatusCode::GONE
+    );
+    assert_eq!(create().await["isError"], true);
+    let search = call(&app, &token, "search_issues", json!({})).await;
+    assert_eq!(search["structuredContent"]["issues"], json!([]));
+    assert_eq!(
+        json_body(app.oneshot(req()).await.unwrap()).await,
+        json!([])
+    );
 }
 
 #[sqlx::test]
@@ -169,6 +213,7 @@ async fn workspace_tokens_isolate_accounts_and_revoke_immediately(pool: PgPool) 
     assert_eq!(search["structuredContent"]["issues"], json!([]));
     for (name, args) in [
         ("get_issue", json!({"id":id})),
+        ("delete_issue", json!({"id":id})),
         ("update_issue", json!({"id":id,"title":"Changed"})),
     ] {
         assert_eq!(call(&app, other_token, name, args).await["isError"], true);

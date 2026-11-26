@@ -74,7 +74,7 @@ The longer-term feature roadmap draws on Linear’s issue tracking and planning 
 
 ### MCP server and Agent tab
 
-**MCP server implemented.** External clients can search, read, create, and update issues through `/api/mcp` using a revocable workspace token. The tools return permanent issue links and share the browser’s validation and field-level merge rules. [Connection instructions](../README.md#connect-an-mcp-client)
+**MCP server implemented.** External clients can search, read, create, update, and delete issues through `/api/mcp` using a revocable workspace token. The tools return permanent issue links and share the browser’s validation and field-level merge rules. [Connection instructions](../README.md#connect-an-mcp-client)
 
 **Agent tab implemented.** The signed-in workspace can send prompts and attached issues to an OpenAI-compatible model, run the issue tools, and open permanent issue links from the reply. Git integration is pending. [Agent configuration](../README.md#use-the-agent-tab)
 

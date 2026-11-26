@@ -53,7 +53,13 @@ function loadChat(key: string): Message[] {
   }
 }
 
-function Transcript({ messages }: { messages: Message[] }) {
+function Transcript({
+  messages,
+  byId,
+}: {
+  messages: Message[];
+  byId: Map<string, Issue>;
+}) {
   return (
     <div
       className="agent-history issue-content"
@@ -74,13 +80,14 @@ function Transcript({ messages }: { messages: Message[] }) {
           <p>{message.content}</p>
           {message.issues.length > 0 && (
             <ul>
-              {message.issues.map((issue) => (
-                <li key={issue.id}>
-                  <a href={issuePath(issue.id)}>
-                    ENG-{issue.number} · {issue.title}
-                  </a>
-                </li>
-              ))}
+              {message.issues.map((issue) => {
+                const label = `ENG-${issue.number} · ${issue.title}`;
+                return (
+                  <li key={issue.id}>
+                    {byId.has(issue.id) ? <a href={issuePath(issue.id)}>{label}</a> : label}
+                  </li>
+                );
+              })}
             </ul>
           )}
         </article>
@@ -164,7 +171,7 @@ export function Agent({
         {
           request_id: requestId.current,
           prompt,
-          issue_id: issueId || null,
+          issue_id: attached?.id ?? null,
           history,
         },
         130000,
@@ -215,6 +222,7 @@ export function Agent({
         <div className="agent-column">
           {chatting && (
             <Transcript
+              byId={byId}
               messages={pending ? [...messages, pending] : messages}
             />
           )}

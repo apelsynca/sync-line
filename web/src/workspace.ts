@@ -1,4 +1,4 @@
-import { request } from "./api";
+import { request, RequestError } from "./api";
 import { activeAccount } from "./session";
 import { viewFromSearch, viewPath } from "./issueViews";
 import {
@@ -253,10 +253,23 @@ export async function sync(account: string) {
       const index = cloud.findIndex((row) => row.id === edit.id);
       if (edit.changes.title && !edit.changes.title.value.trim()) continue;
       if (Object.keys(edit.changes).length) {
-        const response = await request(endpoint + "/" + edit.id, "PATCH", {
-          number: edit.number,
-          changes: edit.changes,
-        });
+        let response: Response;
+        try {
+          response = await request(endpoint + "/" + edit.id, "PATCH", {
+            number: edit.number,
+            changes: edit.changes,
+          });
+        } catch (error) {
+          if (!(error instanceof RequestError) || error.status !== 410) throw error;
+          localStorage.removeItem(editPrefix(account) + edit.id);
+          if (index >= 0) {
+            cloud.splice(index, 1);
+            storeCloud(account, cloud);
+          } else {
+            window.dispatchEvent(new Event("workspace-refresh"));
+          }
+          continue;
+        }
         const saved: CloudIssue = {
           ...(await response.json()),
           acknowledged: edit.revision,
@@ -278,6 +291,12 @@ export async function sync(account: string) {
         String(Math.round(Number(serverTime) - (start + Date.now()) / 2)),
       );
     const remote: Issue[] = await response.json();
+    // An acknowledged edit would become pending again when its cached issue disappears.
+    const liveIds = new Set(remote.map((issue) => issue.id));
+    for (const issue of cloud) {
+      if (!liveIds.has(issue.id))
+        localStorage.removeItem(editPrefix(account) + issue.id);
+    }
     const revisions = new Map(
       cloud.map((issue) => [issue.id, issue.acknowledged]),
     );

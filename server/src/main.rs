@@ -36,6 +36,8 @@ struct Fields {
 
 #[derive(Serialize, sqlx::FromRow)]
 struct Issue {
+    #[serde(skip)]
+    deleted: bool,
     id: Uuid,
     number: i32,
     #[serde(flatten)]
@@ -67,7 +69,7 @@ async fn issues(
 ) -> Result<impl axum::response::IntoResponse, ApiError> {
     auth::authorize(&pool, &headers, workspace).await?;
     let issues = sqlx::query_as::<_, Issue>(
-        "SELECT request_id AS id, * FROM issues WHERE workspace_id=$1 ORDER BY number",
+        "SELECT request_id AS id, * FROM issues WHERE workspace_id=$1 AND NOT deleted ORDER BY number",
     )
     .bind(workspace)
     .fetch_all(&pool)
@@ -125,13 +127,17 @@ async fn write_issue_in(
 ) -> Result<Issue, ApiError> {
     let next = lock_workspace(tx, workspace).await?;
     let current = sqlx::query_as::<_, Issue>(
-        "SELECT request_id AS id, * FROM issues WHERE workspace_id=$1 AND request_id=$2",
+        "SELECT request_id AS id, * FROM issues WHERE workspace_id=$1 AND request_id=$2 FOR UPDATE",
     )
     .bind(workspace)
     .bind(id)
     .fetch_optional(&mut **tx)
     .await
     .map_err(db_error)?;
+    if current.as_ref().is_some_and(|issue| issue.deleted) && !matches!(write, Write::Import { .. })
+    {
+        return Err((StatusCode::GONE, "Issue has been deleted."));
+    }
     if matches!(write, Write::Import { .. } | Write::Create(_))
         && let Some(existing) = current
     {
@@ -147,6 +153,7 @@ async fn write_issue_in(
     };
     let creating = current.is_none();
     let mut issue = current.unwrap_or_else(|| Issue {
+        deleted: false,
         id,
         number: next,
         fields: Fields::default(),

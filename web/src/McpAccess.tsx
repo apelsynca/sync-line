@@ -85,7 +85,7 @@ function AccessDialog({
     >
       <h2 id="mcp-title">MCP access</h2>
       <p>
-        Connect an MCP client to search, read, create, and update issues in this
+        Connect an MCP client to search, read, create, update, and delete issues in this
         workspace.
       </p>
       <label>

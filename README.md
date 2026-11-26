@@ -45,7 +45,7 @@ If this browser still has its old demo cookie, signing in brings your created is
 
 Sign in to the workspace, open **MCP access**, and choose **Create token**. Copy the token before closing the dialog. In your MCP client, select **Streamable HTTP**, paste the displayed server URL, and set the bearer token. For clients with custom headers, set `Authorization` to `Bearer <token>`.
 
-The server exposes four tools. `search_issues` searches by ENG number, title, description, or label. Pass its `next_after` value as `after` to continue a search. `get_issue` reads an issue by UUID. `create_issue` accepts a title and optional fields. Supply a fresh UUID as `request_id` and reuse it when retrying the same creation. `update_issue` takes an issue UUID and the fields to change. Results include permanent links that open in the browser.
+`search_issues` searches by ENG number, title, description, or label. Pass its `next_after` value as `after` to continue a search. `get_issue` reads an issue by UUID. `create_issue` accepts a title and optional fields. Supply a fresh UUID as `request_id` and reuse it when retrying the same creation. `update_issue` takes an issue UUID and the fields to change. `delete_issue` permanently removes an issue by UUID. Its ENG number stays reserved.
 
 Each workspace has one active token. It grants read and write access to synced issues until you choose **Revoke token**, including after browser sign-out. To replace a lost token, revoke it and create another.
 
@@ -63,7 +63,7 @@ AGENT_API_KEY=your-provider-key
 
 For OpenAI, fill in your API key and choose a tool-calling model available to your account. `AGENT_BASE_URL` defaults to the OpenAI URL above. For another provider, set its API root including any version prefix and its exact model ID. The server appends `/chat/completions`. You can omit `AGENT_API_KEY` for a local endpoint that accepts unauthenticated requests. Leave `AGENT_MODEL` unset to run the issue tracker with chat disabled.
 
-Open **Agent** in the workspace sidebar. Edit an example or type a request, attach an issue with **+**, and press Enter to send. Shift+Enter adds a line. The server sends the conversation, attached issue, and requested issue-tool results to the configured provider. Agent can search, read, create, and update issues using your signed-in session. Responses link back to the issues it used. The current conversation stays in this browser tab when you follow a link. **New chat** starts a fresh conversation. Git integration is planned.
+Open **Agent** in the workspace sidebar. Edit an example or type a request, attach an issue with **+**, and press Enter to send. Shift+Enter adds a line. The server sends the conversation, attached issue, and requested issue-tool results to the configured provider. Agent can search, read, create, update, and delete issues using your signed-in session. For example, send “Delete ENG-12” or attach an issue and ask the Agent to delete it. Responses link back to the issues it used. The current conversation stays in this browser tab when you follow a link. **New chat** starts a fresh conversation. Git integration is planned.
 
 ## Check the offline workflow
 

@@ -111,3 +111,61 @@ test("edit an example, attach an issue, and follow its chat link at phone width"
   expect(await log.count()).toBe(0);
   await page.close();
 }, 30000);
+
+test("sync clears stale edits for deleted issues and uploads the next issue", async () => {
+  const page = await browser.newPage();
+  const issues = ["Offline edit", "Already synced", "Keep this issue"].map(
+    (title, index) => ({
+      id: crypto.randomUUID(),
+      number: index + 1,
+      title,
+      description: "",
+      status: "Todo",
+      priority: "Low",
+      assignee: "",
+      labels: "",
+      position: "",
+    }),
+  );
+  await page.addInitScript((issues) => {
+    localStorage.setItem("sync-line:account", "test");
+    const cached = issues.map((issue) => ({
+      ...issue,
+      acknowledged: issue.number === 2 ? "saved" : undefined,
+    }));
+    localStorage.setItem("sync-line:test:cloud", JSON.stringify(cached));
+    for (const issue of issues) {
+      const edit = {
+        ...issue,
+        title: issue.title + " edited",
+        revision: issue.number === 2 ? "saved" : "pending",
+      };
+      localStorage.setItem("sync-line:test:edit:" + issue.id, JSON.stringify(edit));
+    }
+  }, issues);
+  const saved = { ...issues[2], title: "Synced remaining issue" };
+  const uploads: string[] = [];
+  await page.route("**/api/workspaces/test/issues/*", (route) => {
+    const id = route.request().url().split("/").pop()!;
+    uploads.push(id);
+    return id === saved.id
+      ? route.fulfill({ json: saved })
+      : route.fulfill({ status: 410, body: "Issue has been deleted." });
+  });
+  await page.route("**/api/workspaces/test/issues", (route) =>
+    route.fulfill({ json: [saved] }),
+  );
+  await page.goto(server.resolvedUrls!.local[0] + "app");
+  await page.waitForFunction((deletedId) =>
+    localStorage.getItem("sync-line:test:edit:" + deletedId) === null,
+    issues[1].id,
+  );
+  await page.getByText(saved.title, { exact: true }).waitFor();
+  expect(uploads).toEqual([issues[0].id, saved.id]);
+  const cache = await page.evaluate(() =>
+    JSON.parse(localStorage.getItem("sync-line:test:cloud")!),
+  );
+  expect(cache).toMatchObject([{ id: saved.id }]);
+  expect(await page.getByRole("link", { name: /Offline edit|Already synced/ }).count()).toBe(0);
+  await page.close();
+});

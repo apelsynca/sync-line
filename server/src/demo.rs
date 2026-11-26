@@ -20,7 +20,7 @@ pub async fn import(
     lock_workspace(tx, destination).await?;
     let issues = sqlx::query_as::<_, Issue>(
         "SELECT demo.request_id AS id, demo.* FROM issues demo
-         WHERE demo.workspace_id=$1
+         WHERE demo.workspace_id=$1 AND NOT demo.deleted
          ORDER BY EXISTS (SELECT 1 FROM issues cloud
              WHERE cloud.workspace_id=$2 AND cloud.number=demo.number), demo.number",
     )

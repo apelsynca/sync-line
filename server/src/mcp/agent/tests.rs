@@ -55,7 +55,13 @@ async fn chat_uses_scoped_tools_and_returns_permanent_issue_references(pool: PgP
             async move {
                 assert_eq!(headers[header::AUTHORIZATION], "Bearer sample-key");
                 assert_eq!(body["model"], "test-model");
-                assert_eq!(body["tools"].as_array().unwrap().len(), 4);
+                assert!(
+                    body["tools"]
+                        .as_array()
+                        .unwrap()
+                        .iter()
+                        .any(|tool| tool["function"]["name"] == "delete_issue")
+                );
                 let messages = body["messages"].as_array().unwrap();
                 let last = messages.last().unwrap();
                 let tool = |id: &str, name: &str, args: Value| {
@@ -63,7 +69,21 @@ async fn chat_uses_scoped_tools_and_returns_permanent_issue_references(pool: PgP
                         "name":name, "arguments":args.to_string()
                     }})
                 };
-                let reply = if last["tool_call_id"] == "attached_issue" {
+                let reply = if last["tool_call_id"] == "delete" {
+                    let result: Value =
+                        serde_json::from_str(last["content"].as_str().unwrap()).unwrap();
+                    assert_eq!(result["deleted"], true);
+                    assert_eq!(result["number"], 1);
+                    json!({"content":"Deleted ENG-1."})
+                } else if last["tool_call_id"] == "attached_issue"
+                    && messages
+                        .iter()
+                        .any(|m| m["role"] == "user" && m["content"] == "Delete this issue")
+                {
+                    let issue: Value =
+                        serde_json::from_str(last["content"].as_str().unwrap()).unwrap();
+                    json!({"tool_calls":[tool("delete","delete_issue",json!({"id":issue["id"]}))]})
+                } else if last["tool_call_id"] == "attached_issue" {
                     assert!(last["content"].as_str().unwrap().contains("Deferred task"));
                     json!({"tool_calls":[
                         tool("backlog","search_issues",json!({"statuses":["Backlog"]})),
@@ -110,6 +130,11 @@ async fn chat_uses_scoped_tools_and_returns_permanent_issue_references(pool: PgP
         assert_eq!(reply["issues"][1]["number"], 2);
         assert_eq!(reply["content"], "Created ENG-2 to follow up on ENG-1.");
     }
+    body["prompt"] = json!("Delete this issue");
+    body["request_id"] = json!(Uuid::new_v4());
+    let deleted = json_body(send(&app, owner, &cookie, &body).await).await;
+    assert_eq!(deleted["content"], "Deleted ENG-1.");
+    assert_eq!(deleted["issues"], json!([]));
     body["issue_id"] = private["id"].clone();
     assert_eq!(
         send(&app, owner, &cookie, &body).await.status(),

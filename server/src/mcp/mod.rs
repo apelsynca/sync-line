@@ -184,7 +184,7 @@ impl IssueTools {
             return Err("Query contains an invalid character.".into());
         }
         let rows: Vec<(Uuid, i32, String, String)> = sqlx::query_as(
-            "SELECT request_id, number, title, status FROM issues WHERE workspace_id=$1 AND number > $2::bigint
+            "SELECT request_id, number, title, status FROM issues WHERE workspace_id=$1 AND NOT deleted AND number > $2::bigint
              AND (strpos(lower('ENG-' || number), lower($3)) > 0 OR strpos(lower(title), lower($3)) > 0
              OR strpos(lower(description), lower($3)) > 0 OR strpos(lower(labels), lower($3)) > 0)
              AND (cardinality($4::text[]) = 0 OR status = ANY($4)) AND ($5::text IS NULL OR assignee = $5)
@@ -224,7 +224,7 @@ impl IssueTools {
         Parameters(input): Parameters<IssueId>,
     ) -> Result<CallToolResult, String> {
         let issue = sqlx::query_as::<_, Issue>(
-            "SELECT request_id AS id, * FROM issues WHERE workspace_id=$1 AND request_id=$2",
+            "SELECT request_id AS id, * FROM issues WHERE workspace_id=$1 AND request_id=$2 AND NOT deleted",
         )
         .bind(self.workspace)
         .bind(input.id)
@@ -272,6 +272,28 @@ impl IssueTools {
             .await
             .map_err(|e| e.1)?;
         Ok(self.issue(issue))
+    }
+
+    #[tool(annotations(destructive_hint = true, idempotent_hint = true))]
+    /// Permanently delete one issue by UUID when the user asks to delete it.
+    async fn delete_issue(
+        &self,
+        Parameters(input): Parameters<IssueId>,
+    ) -> Result<CallToolResult, String> {
+        let number: i32 = sqlx::query_scalar(
+            "UPDATE issues SET deleted=true, title='', description='', labels='', position='',
+             versions='{}', status='Todo', priority='No priority', assignee=''
+             WHERE workspace_id=$1 AND request_id=$2 AND NOT deleted RETURNING number",
+        )
+        .bind(self.workspace)
+        .bind(input.id)
+        .fetch_optional(&self.pool)
+        .await
+        .map_err(|e| db_error(e).1)?
+        .ok_or("Issue not found.")?;
+        Ok(CallToolResult::structured(
+            json!({"id": input.id, "number": number, "deleted": true}),
+        ))
     }
 }
 
