@@ -693,7 +693,7 @@ function Workspace({
   );
   return (
     <>
-      {path === "/" ? <Home /> : workspace}
+      {workspace}
       {composing && (
         <Editor
           account={account}
@@ -711,6 +711,11 @@ if (import.meta.env.PROD && "serviceWorker" in navigator) {
 }
 
 const account = activeAccount();
+if (account && location.pathname === "/") {
+  const url = new URL(location.href);
+  url.pathname = "/app";
+  history.replaceState(history.state, "", url);
+}
 watchSession(account);
 
 const newIssuePath = "/app/issues/new";
