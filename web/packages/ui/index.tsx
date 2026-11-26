@@ -11,9 +11,9 @@ export { PropertySelect } from "./PropertySelect";
 
 const logoUrl = new URL("./sync-line-logo.svg", import.meta.url).href;
 
-export function Brand() {
+export function Brand({ href = "/" }: { href?: string }) {
   return (
-    <a className="brand" href="/" aria-label="Sync Line home">
+    <a className="brand" href={href} aria-label="Sync Line home">
       <img src={logoUrl} alt="" width="309" height="64" />
     </a>
   );
