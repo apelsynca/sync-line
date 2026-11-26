@@ -733,8 +733,6 @@ function Workspace({
 			<aside>
 				<Brand href="/app" />
 				<nav aria-label="Your workspace">
-					<p>Your workspace</p>
-					<ProjectMenu account={account} projects={projects} active={active} select={selectProject} />
 					<a href="/app" className="nav-issues" aria-current={path !== agentPath ? "location" : undefined}>
 						<ListTodo size={16} aria-hidden="true" /> Issues
 					</a>
@@ -759,6 +757,9 @@ function Workspace({
 				/>
 			</aside>
 			<main className={path === agentPath ? "agent-main" : undefined}>
+				<header className="project-toolbar" aria-label="Project controls">
+					<ProjectMenu account={account} projects={projects} active={active} select={selectProject} />
+				</header>
 				{expired && (
 					<button
 						type="button"

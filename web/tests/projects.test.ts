@@ -17,9 +17,13 @@ test("offline projects keep separate issues and composer drafts after reopening"
     await title.fill("Engineering draft");
     await page.getByRole("button", { name: "Close new issue" }).click();
 
-    await page.getByRole("button", { name: "New project" }).click();
+    const controls = page.getByRole("main").locator("header", { has: page.getByRole("combobox", { name: "Current project" }) });
+    await controls.getByRole("button", { name: "New project" }).click();
     await page.getByLabel("Project name").fill("Design");
     await page.getByRole("button", { name: "Create project" }).click();
+    await controls.getByRole("button", { name: "Rename project" }).click();
+    await page.getByLabel("Project name").fill("Product design");
+    await page.getByRole("button", { name: "Save name" }).click();
     await firstIssue.click();
     expect(await title.inputValue()).toBe("");
     await title.fill("Review designs");
@@ -35,7 +39,7 @@ test("offline projects keep separate issues and composer drafts after reopening"
     expect(await title.inputValue()).toBe("Engineering draft");
     await page.goto(new URL(bookmark!, page.url()).href);
     expect(await title.inputValue()).toBe("Review designs");
-    expect(await page.getByRole("combobox", { name: "Current project" }).innerText()).toBe("Design");
+    expect(await controls.getByRole("combobox", { name: "Current project" }).innerText()).toBe("Product design");
   } finally {
     await browser.close();
     await server.close();

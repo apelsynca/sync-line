@@ -50,9 +50,17 @@ aside {
 aside nav {
   margin-top: 2.75rem;
 }
-nav p {
-  color: var(--muted);
-  font-size: 0.8rem;
+.project-toolbar {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.25rem 1rem;
+  padding: 0.5rem 1rem;
+  border-bottom: 1px solid var(--line);
+}
+.project-toolbar .session-action {
+  margin: 0;
 }
 .team,
 .list-head,
@@ -351,9 +359,6 @@ aside .session-action {
   }
   aside nav {
     margin: 0;
-  }
-  aside nav > :is(p, .team) {
-    display: none;
   }
   .row {
     flex-wrap: wrap;
