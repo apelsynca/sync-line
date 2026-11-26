@@ -31,6 +31,7 @@ import seeds from "../shared/demo-v1.json";
 import { SignIn, SignInForm } from "./SignIn";
 import { emptyFields } from "./versions";
 import { SavedViews, type IssueFilters } from "./SavedViews";
+import { CommandMenu } from "./CommandMenu";
 import { FieldReview } from "./FieldReview";
 import { SignOutButton } from "./SignOutButton";
 import { RequestError } from "./api";
@@ -69,13 +70,28 @@ function IssueList({
   onCreate?: () => void;
 }) {
   const preview = !onCreate;
-  const [filters, setFilters] = useState<IssueFilters>({
-    view: "all",
-    query: "",
-    statusFilter: anyStatus,
-    priorityFilter: anyPriority,
+  const [filters, setFilters] = useState<IssueFilters>(() => {
+    const initialView =
+      account && new URLSearchParams(location.search).get("view");
+    return {
+      view:
+        initialView === "active" || initialView === "mine"
+          ? initialView
+          : "all",
+      query: "",
+      statusFilter: anyStatus,
+      priorityFilter: anyPriority,
+    };
   });
   const { view, query, statusFilter, priorityFilter } = filters;
+  useEffect(() => {
+    if (!account || location.pathname !== "/app") return;
+    const url = new URL(location.href);
+    if (view === "all") url.searchParams.delete("view");
+    else url.searchParams.set("view", view);
+    if (url.href !== location.href)
+      history.replaceState(history.state, "", url);
+  }, [account, view]);
   function updateFilters(changes: Partial<IssueFilters>) {
     setFilters((current) => ({ ...current, ...changes }));
   }
@@ -601,6 +617,11 @@ function Workspace({
           <a href="/app" className="nav-issues">
             <ListTodo size={16} aria-hidden="true" /> Issues
           </a>
+          <CommandMenu
+            issues={issues}
+            onCreate={openComposer}
+            canNavigate={!writeFailed}
+          />
         </nav>
         <SignOutButton
           account={account}

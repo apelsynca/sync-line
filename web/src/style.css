@@ -355,7 +355,8 @@ a.row:hover {
   margin: 0 0 1rem;
 }
 .auth input,
-.saved-views input {
+.saved-views input,
+.command-menu input {
   display: block;
   width: 100%;
   padding: 0.55rem;
@@ -462,4 +463,26 @@ a.row:hover {
 }
 .saved-views li .editor-tool {
   flex: none;
+}
+
+.command-head {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+.command-menu ul {
+  list-style: none;
+  padding: 0;
+  margin: 0.6rem 0 0;
+  max-height: 45dvh;
+  overflow-y: auto;
+}
+.command-menu [role="option"] {
+  cursor: pointer;
+  padding: 0.45rem 0.65rem;
+  border-radius: 6px;
+  overflow-wrap: anywhere;
+}
+.command-menu [role="option"]:is(:hover, [aria-selected="true"]) {
+  background: var(--control);
 }
