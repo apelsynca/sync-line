@@ -55,6 +55,9 @@ function Team() {
   );
 }
 
+const anyStatus = "Any status";
+const anyPriority = "Any priority";
+
 function IssueList({
   issues,
   onCreate,
@@ -65,10 +68,19 @@ function IssueList({
   const preview = !onCreate;
   const [activeOnly, setActiveOnly] = useState(false);
   const [query, setQuery] = useState("");
+  const [statusFilter, setStatusFilter] = useState(anyStatus);
+  const [priorityFilter, setPriorityFilter] = useState(anyPriority);
   const term = query.trim().toLowerCase();
+  const filtered =
+    Boolean(term) || statusFilter !== anyStatus || priorityFilter !== anyPriority;
+  const statuses = properties.status.filter(
+    (status) => !activeOnly || status !== "Done",
+  );
   const visibleIssues = issues.filter(
     (issue) =>
-      (!activeOnly || issue.status !== "Done") &&
+      statuses.includes(issue.status) &&
+      (statusFilter === anyStatus || issue.status === statusFilter) &&
+      (priorityFilter === anyPriority || issue.priority === priorityFilter) &&
       (!term ||
         `eng-${issue.number}`.includes(term) ||
         issue.title.toLowerCase().includes(term) ||
@@ -97,65 +109,83 @@ function IssueList({
         )}
       </div>
       <div className="list-filters" role="group" aria-label="Issue view">
-        <button aria-pressed={activeOnly} onClick={() => setActiveOnly(true)}>
+        <button
+          aria-pressed={activeOnly}
+          onClick={() => {
+            setActiveOnly(true);
+            if (statusFilter === "Done") setStatusFilter(anyStatus);
+          }}
+        >
           Active
         </button>
         <button aria-pressed={!activeOnly} onClick={() => setActiveOnly(false)}>
           All issues
         </button>
         {!preview && (
-          <input
-            className="issue-search"
-            type="search"
-            aria-label="Search issues by number, title, or description"
-            placeholder="Search issues…"
-            value={query}
-            onChange={(event) => setQuery(event.target.value)}
-          />
+          <>
+            <PropertySelect
+              label="Filter by status"
+              value={statusFilter}
+              options={[anyStatus, ...statuses]}
+              onChange={setStatusFilter}
+            />
+            <PropertySelect
+              label="Filter by priority"
+              value={priorityFilter}
+              options={[anyPriority, ...properties.priority]}
+              onChange={setPriorityFilter}
+            />
+            <input
+              className="issue-search"
+              type="search"
+              aria-label="Search issues by number, title, or description"
+              placeholder="Search issues…"
+              value={query}
+              onChange={(event) => setQuery(event.target.value)}
+            />
+          </>
         )}
       </div>
-      {term && !visibleIssues.length && (
+      {filtered && !visibleIssues.length && (
         <p className="search-empty" role="status">
           No matching issues in this view.
         </p>
       )}
-      {properties.status
-        .filter((status) => !activeOnly || status !== "Done")
-        .map((status) => {
-          const group = visibleIssues.filter((issue) => issue.status === status);
-          if (term && !group.length) return null;
-          return (
-            <details className="issue-group" key={status} open>
-              <summary>
-                <Status value={status} />
-                <span>{group.length}</span>
-              </summary>
-              <ul>
-                {group.map((issue) => {
-                  const content = (
-                    <>
-                      <span className="identifier">ENG-{issue.number}</span>
-                      <StatusIcon value={status} />
-                      <strong>{issue.title}</strong>
-                      <Avatar name={issue.assignee} />
-                    </>
-                  );
-                  return (
-                    <li key={issue.id}>
-                      {preview ? (
-                        <div className="row">{content}</div>
-                      ) : (
-                        <a className="row" href={issuePath(issue.id)}>
-                          {content}
-                        </a>
-                      )}
-                    </li>
-                  );
-                })}
-              </ul>
-            </details>
-          );
-        })}
+      {statuses.map((status) => {
+        const group = visibleIssues.filter((issue) => issue.status === status);
+        if (filtered && !group.length) return null;
+        return (
+          <details className="issue-group" key={status} open>
+            <summary>
+              <Status value={status} />
+              <span>{group.length}</span>
+            </summary>
+            <ul>
+              {group.map((issue) => {
+                const content = (
+                  <>
+                    <span className="identifier">ENG-{issue.number}</span>
+                    <StatusIcon value={status} />
+                    <strong>{issue.title}</strong>
+                    <Avatar name={issue.assignee} />
+                  </>
+                );
+                return (
+                  <li key={issue.id}>
+                    {preview ? (
+                      <div className="row">{content}</div>
+                    ) : (
+                      <a className="row" href={issuePath(issue.id)}>
+                        {content}
+                      </a>
+                    )}
+                  </li>
+                );
+              })}
+            </ul>
+          </details>
+        );
+      })}
     </section>
   );
 }
