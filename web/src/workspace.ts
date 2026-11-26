@@ -1,5 +1,6 @@
 import { request } from "./api";
 import { activeAccount } from "./session";
+import { viewFromSearch, viewPath } from "./issueViews";
 import {
   emptyFields,
   fieldNames,
@@ -35,10 +36,8 @@ export function rememberWorkspacePage(account: string) {
   if (document.visibilityState !== "visible") return;
   const path = location.pathname;
   if (path === newIssuePath) return;
-  const view = new URLSearchParams(location.search).get("view");
   let page = "/app";
-  if (path === "/app" && (view === "mine" || view === "active"))
-    page += "?view=" + view;
+  if (path === "/app") page = viewPath(viewFromSearch(location.search));
   else if (path.startsWith("/app/issues/")) page = path;
   try {
     localStorage.setItem(lastPageKey(account), page);
@@ -49,7 +48,7 @@ export function rememberWorkspacePage(account: string) {
 
 export function lastWorkspacePage(account: string) {
   const page = localStorage.getItem(lastPageKey(account));
-  if (page === "/app?view=mine" || page === "/app?view=active") return page;
+  if (page?.startsWith("/app?")) return viewPath(viewFromSearch(page.slice(4)));
   if (
     page?.startsWith("/app/issues/") &&
     page !== newIssuePath &&

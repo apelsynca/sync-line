@@ -52,7 +52,7 @@ impl Version {
         let valid = match field {
             Field::Title => !value.trim().is_empty() && value.chars().count() <= 200,
             Field::Description => true,
-            Field::Status => ["Todo", "In progress", "Done"].contains(&value),
+            Field::Status => ["Backlog", "Todo", "In progress", "Done"].contains(&value),
             Field::Assignee => ["", "Me"].contains(&value),
             Field::Priority => ["No priority", "Low", "Medium", "High"].contains(&value),
         };

@@ -1,9 +1,10 @@
 import { useEffect, useState, type FormEvent } from "react";
 import { Bookmark, Trash2 } from "lucide-react";
 import { Modal } from "@sync-line/ui";
+import type { IssueView } from "./issueViews";
 
 export type IssueFilters = {
-  view: "all" | "active" | "mine";
+  view: IssueView;
   query: string;
   statusFilter: string;
   priorityFilter: string;

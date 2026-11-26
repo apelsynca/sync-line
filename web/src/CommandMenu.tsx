@@ -2,6 +2,7 @@ import { useEffect, useRef, useState } from "react";
 import { Command, X } from "lucide-react";
 import { Modal } from "@sync-line/ui";
 import { issuePath, type Issue } from "./workspace";
+import { viewPath } from "./issueViews";
 
 export function CommandMenu({
   issues,
@@ -61,9 +62,10 @@ export function CommandMenu({
     if (canNavigate && issues.length) {
       const go = (label: string, path: string) =>
         add(path, label, () => location.assign(path));
-      go("All issues", "/app");
-      go("Active issues", "/app?view=active");
-      go("My issues", "/app?view=mine");
+      go("All issues", viewPath("all"));
+      go("Active issues", viewPath("active"));
+      go("My issues", viewPath("mine"));
+      go("Backlog", viewPath("backlog"));
       if (term) {
         for (const issue of issues) {
           go(`ENG-${issue.number} · ${issue.title}`, issuePath(issue.id));

@@ -1,5 +1,11 @@
 import { useEffect, useRef, type ReactNode } from "react";
-import { Circle, CircleDot, CircleCheck, UserRound } from "lucide-react";
+import {
+  Circle,
+  CircleDashed,
+  CircleDot,
+  CircleCheck,
+  UserRound,
+} from "lucide-react";
 import "./theme.css";
 export { PropertySelect } from "./PropertySelect";
 
@@ -19,7 +25,9 @@ export function StatusIcon({ value }: { value: string }) {
       ? CircleCheck
       : value === "In progress"
         ? CircleDot
-        : Circle;
+        : value === "Backlog"
+          ? CircleDashed
+          : Circle;
   return (
     <Icon
       size={15}

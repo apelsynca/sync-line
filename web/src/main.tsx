@@ -32,6 +32,12 @@ import { SignIn, SignInForm } from "./SignIn";
 import { emptyFields } from "./versions";
 import { SavedViews, type IssueFilters } from "./SavedViews";
 import { CommandMenu } from "./CommandMenu";
+import {
+  issueStatuses,
+  issueViews,
+  viewFromSearch,
+  type IssueView,
+} from "./issueViews";
 import { FieldReview } from "./FieldReview";
 import { SignOutButton } from "./SignOutButton";
 import { RequestError } from "./api";
@@ -74,13 +80,8 @@ function IssueList({
 }) {
   const preview = !onCreate;
   const [filters, setFilters] = useState<IssueFilters>(() => {
-    const initialView =
-      account && new URLSearchParams(location.search).get("view");
     return {
-      view:
-        initialView === "active" || initialView === "mine"
-          ? initialView
-          : "all",
+      view: account ? viewFromSearch(location.search) : "all",
       query: "",
       statusFilter: anyStatus,
       priorityFilter: anyPriority,
@@ -105,10 +106,13 @@ function IssueList({
     Boolean(term) ||
     statusFilter !== anyStatus ||
     priorityFilter !== anyPriority;
-  const hideEmptyGroups = filtered || view === "mine";
-  const statuses = properties.status.filter(
-    (status) => view !== "active" || status !== "Done",
+  const hideEmptyGroups = filtered || view === "mine" || view === "backlog";
+  const statuses = issueViews[view].statuses.filter(
+    (status) => !preview || status !== "Backlog",
   );
+  const views: IssueView[] = preview
+    ? ["active", "all"]
+    : ["active", "all", "mine", "backlog"];
   const visibleIssues = issues.filter(
     (issue) =>
       statuses.includes(issue.status) &&
@@ -143,37 +147,34 @@ function IssueList({
         )}
       </div>
       <div className="list-filters" role="group" aria-label="Issue view">
-        <button
-          aria-pressed={view === "active"}
-          onClick={() => {
-            updateFilters({
-              view: "active",
-              statusFilter: statusFilter === "Done" ? anyStatus : statusFilter,
-            });
-          }}
-        >
-          Active
-        </button>
-        <button
-          aria-pressed={view === "all"}
-          onClick={() => updateFilters({ view: "all" })}
-        >
-          All issues
-        </button>
+        {views.map((next) => (
+          <button
+            key={next}
+            aria-pressed={view === next}
+            onClick={() =>
+              updateFilters({
+                view: next,
+                statusFilter:
+                  next !== "backlog" &&
+                  issueViews[next].statuses.includes(statusFilter)
+                    ? statusFilter
+                    : anyStatus,
+              })
+            }
+          >
+            {issueViews[next].label}
+          </button>
+        ))}
         {!preview && (
           <>
-            <button
-              aria-pressed={view === "mine"}
-              onClick={() => updateFilters({ view: "mine" })}
-            >
-              My issues
-            </button>
-            <PropertySelect
-              label="Filter by status"
-              value={statusFilter}
-              options={[anyStatus, ...statuses]}
-              onChange={(statusFilter) => updateFilters({ statusFilter })}
-            />
+            {view !== "backlog" && (
+              <PropertySelect
+                label="Filter by status"
+                value={statusFilter}
+                options={[anyStatus, ...statuses]}
+                onChange={(statusFilter) => updateFilters({ statusFilter })}
+              />
+            )}
             <PropertySelect
               label="Filter by priority"
               value={priorityFilter}
@@ -202,7 +203,9 @@ function IssueList({
         <p className="search-empty" role="status">
           {filtered
             ? "No matching issues in this view."
-            : "No issues assigned to you."}
+            : view === "backlog"
+              ? "No issues in your backlog."
+              : "No issues assigned to you."}
         </p>
       )}
       {statuses.map((status) => {
@@ -298,7 +301,7 @@ const priorityIcons = new Map([
 ]);
 
 const properties = {
-  status: ["Todo", "In progress", "Done"],
+  status: issueStatuses,
   assignee: ["", "Me"],
   priority: [...priorityIcons.keys()],
 };
@@ -326,10 +329,15 @@ function Editor({
   { issue: Issue; onDismiss?: never } | { issue?: never; onDismiss: () => void }
 )) {
   const draftKey = composerKey(account);
+  const initialFields =
+    location.pathname === "/app" &&
+    viewFromSearch(location.search) === "backlog"
+      ? { ...emptyFields, status: "Backlog" }
+      : emptyFields;
   const [localDraft, edit] = useState<Partial<Fields> | undefined>(() =>
     issue
       ? undefined
-      : (JSON.parse(localStorage.getItem(draftKey) ?? "null") ?? emptyFields),
+      : (JSON.parse(localStorage.getItem(draftKey) ?? "null") ?? initialFields),
   );
   const draft: Fields = { ...emptyFields, ...issue, ...localDraft };
   const titleInput = useRef<HTMLInputElement>(null);
@@ -399,7 +407,7 @@ function Editor({
       localStorage.removeItem(draftKey);
       setWriteFailed(false);
       if (createMore) {
-        edit(emptyFields);
+        edit(initialFields);
         setRequestId(crypto.randomUUID());
         setFeedback("");
         requestAnimationFrame(() => titleInput.current?.focus());

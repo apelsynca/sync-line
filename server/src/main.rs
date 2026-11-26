@@ -291,7 +291,7 @@ mod tests {
                 &pool,
                 workspace,
                 original,
-                patch([(Field::Status, edit("Done", b))].into())
+                patch([(Field::Status, edit("Backlog", b))].into())
             )
         );
         title.unwrap();
@@ -327,7 +327,7 @@ mod tests {
         .unwrap();
         assert_eq!(first.id, original);
         assert_eq!(first.fields.title, "Renamed");
-        assert_eq!(first.fields.status, "Done");
+        assert_eq!(first.fields.status, "Backlog");
         assert_eq!(first.fields.description, "Keep description");
         assert_eq!(first.fields.assignee, "Me");
     }
