@@ -309,11 +309,15 @@ a.row:hover {
   width: min(14rem, 100%);
   margin-inline-start: auto;
   padding: 0.3rem 0.65rem;
-  border: 1px solid var(--line);
+  border: 0;
   border-radius: 6px;
   background: var(--panel);
   color: var(--ink);
   font-size: 0.85rem;
+}
+.issue-search:focus-visible {
+  outline: none;
+  background: var(--control);
 }
 .search-empty {
   margin: 1.25rem 1rem;
