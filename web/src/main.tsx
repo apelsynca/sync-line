@@ -64,6 +64,16 @@ function IssueList({
 }) {
   const preview = !onCreate;
   const [activeOnly, setActiveOnly] = useState(false);
+  const [query, setQuery] = useState("");
+  const term = query.trim().toLowerCase();
+  const visibleIssues = issues.filter(
+    (issue) =>
+      (!activeOnly || issue.status !== "Done") &&
+      (!term ||
+        `eng-${issue.number}`.includes(term) ||
+        issue.title.toLowerCase().includes(term) ||
+        issue.description.toLowerCase().includes(term)),
+  );
   return (
     <section
       className="list-card"
@@ -93,11 +103,27 @@ function IssueList({
         <button aria-pressed={!activeOnly} onClick={() => setActiveOnly(false)}>
           All issues
         </button>
+        {!preview && (
+          <input
+            className="issue-search"
+            type="search"
+            aria-label="Search issues by number, title, or description"
+            placeholder="Search issues…"
+            value={query}
+            onChange={(event) => setQuery(event.target.value)}
+          />
+        )}
       </div>
+      {term && !visibleIssues.length && (
+        <p className="search-empty" role="status">
+          No matching issues in this view.
+        </p>
+      )}
       {properties.status
         .filter((status) => !activeOnly || status !== "Done")
         .map((status) => {
-          const group = issues.filter((issue) => issue.status === status);
+          const group = visibleIssues.filter((issue) => issue.status === status);
+          if (term && !group.length) return null;
           return (
             <details className="issue-group" key={status} open>
               <summary>
