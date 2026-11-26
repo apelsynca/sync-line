@@ -346,6 +346,12 @@ function Editor({
 	const [expanded, setExpanded] = useState(false);
 	const [requestId, setRequestId] = useState(() => crypto.randomUUID());
 	const [creating, setCreating] = useState(false);
+	const [confirmDelete, setConfirmDelete] = useState(false);
+	const deleteTrigger = useRef<HTMLButtonElement>(null);
+	function dismissDelete() {
+		setConfirmDelete(false);
+		requestAnimationFrame(() => deleteTrigger.current?.focus());
+	}
 	const [feedback, setFeedback] = useState("");
 	function reportWriteFailure() {
 		setWriteFailed(true);
@@ -435,17 +441,11 @@ function Editor({
 							<button
 								type="button"
 								className="editor-tool"
+								ref={deleteTrigger}
 								aria-label="Delete issue"
 								title="Delete issue"
-								onClick={() => {
-									if (!window.confirm(`Permanently delete ENG-${issue.number} “${draft.title}”?`)) return;
-									try {
-										deleteIssue(account, issue.id);
-										location.replace("/app");
-									} catch {
-										setFeedback("Couldn't save the deletion on this device. Try again.");
-									}
-								}}
+								aria-haspopup="dialog"
+								onClick={() => setConfirmDelete(true)}
 							>
 								<Trash2 size={16} aria-hidden="true" />
 							</button>
@@ -590,7 +590,27 @@ function Editor({
 		</form>
 	);
 	return issue ? (
-		form
+		<>
+			{form}
+			{confirmDelete && (
+				<Modal labelledBy="delete-issue-title" className="session-dialog delete-dialog" onDismiss={dismissDelete}>
+					<h2 id="delete-issue-title">Delete ENG-{issue.number}?</h2>
+					<p>{draft.title.trim() ? `“${draft.title}”` : "This issue"} will be permanently deleted.</p>
+					<div className="actions">
+						<button type="button" className="secondary" autoFocus onClick={dismissDelete}>Cancel</button>
+						<button type="button" className="delete-confirm" onClick={() => {
+							try {
+								deleteIssue(account, issue.id);
+								location.replace("/app");
+							} catch {
+								setConfirmDelete(false);
+								setFeedback("Couldn't save the deletion on this device. Try again.");
+							}
+						}}>Delete issue</button>
+					</div>
+				</Modal>
+			)}
+		</>
 	) : (
 		<ComposerDialog expanded={expanded} onDismiss={onDismiss}>
 			{form}
@@ -806,7 +826,7 @@ function App() {
 	const requiresSignIn = new URLSearchParams(location.search).has("signin");
 	useEffect(() => {
 		function onKeyDown(event: KeyboardEvent) {
-			if (event.key === "Tab" && !event.ctrlKey && !event.metaKey && !event.altKey) {
+			if (event.key === "Tab" && !document.querySelector("dialog[open]") && !event.ctrlKey && !event.metaKey && !event.altKey) {
 				event.preventDefault();
 				return;
 			}

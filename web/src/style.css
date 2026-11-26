@@ -583,6 +583,16 @@ aside .session-action {
   font-size: 1.2rem;
   margin: 0;
 }
+.delete-dialog p {
+  overflow-wrap: anywhere;
+}
+.delete-dialog .delete-confirm {
+  background: #ad343e;
+  color: white;
+}
+.delete-dialog .delete-confirm:hover {
+  background: #c43b47;
+}
 .mcp-copy-field {
   margin-block: 1rem;
 }
