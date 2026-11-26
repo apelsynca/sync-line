@@ -26,8 +26,38 @@ type CloudIssue = Issue & { acknowledged?: string };
 const cloudKey = (account: string) => `sync-line:${account}:cloud`;
 const editPrefix = (account: string) => `sync-line:${account}:edit:`;
 const offsetKey = (account: string) => `sync-line:${account}:clock-offset`;
+const lastPageKey = (account: string) => `sync-line:${account}:last-page`;
 export const composerKey = (account: string) => `sync-line:${account}:composer`;
 export const issuePath = (id: string) => "/app/issues/" + id;
+export const newIssuePath = issuePath("new");
+
+export function rememberWorkspacePage(account: string) {
+  if (document.visibilityState !== "visible") return;
+  const path = location.pathname;
+  if (path === newIssuePath) return;
+  const view = new URLSearchParams(location.search).get("view");
+  let page = "/app";
+  if (path === "/app" && (view === "mine" || view === "active"))
+    page += "?view=" + view;
+  else if (path.startsWith("/app/issues/")) page = path;
+  try {
+    localStorage.setItem(lastPageKey(account), page);
+  } catch {
+    // A full storage quota should leave the current page usable.
+  }
+}
+
+export function lastWorkspacePage(account: string) {
+  const page = localStorage.getItem(lastPageKey(account));
+  if (page === "/app?view=mine" || page === "/app?view=active") return page;
+  if (
+    page?.startsWith("/app/issues/") &&
+    page !== newIssuePath &&
+    readIssues(account).some((issue) => issuePath(issue.id) === page)
+  )
+    return page;
+  return "/app";
+}
 
 function cloudIssues(account: string): CloudIssue[] {
   return JSON.parse(localStorage.getItem(cloudKey(account)) ?? "[]");

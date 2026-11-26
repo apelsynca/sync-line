@@ -55,7 +55,8 @@ export function verifyAccount(
 
 export function watchSession(account: string | null) {
   function checkAccount() {
-    if (account !== activeAccount()) location.replace("/app");
+    const next = activeAccount();
+    if (account !== next) location.replace(next ? "/" : "/app");
   }
   window.addEventListener("pageshow", checkAccount);
   window.addEventListener("storage", (event) => {

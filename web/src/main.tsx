@@ -40,7 +40,10 @@ import {
   composerKey,
   createIssue,
   issuePath,
+  lastWorkspacePage,
+  newIssuePath,
   readIssues,
+  rememberWorkspacePage,
   saveIssue,
   sync,
   type Fields,
@@ -89,8 +92,10 @@ function IssueList({
     const url = new URL(location.href);
     if (view === "all") url.searchParams.delete("view");
     else url.searchParams.set("view", view);
-    if (url.href !== location.href)
+    if (url.href !== location.href) {
       history.replaceState(history.state, "", url);
+      rememberWorkspacePage(account);
+    }
   }, [account, view]);
   function updateFilters(changes: Partial<IssueFilters>) {
     setFilters((current) => ({ ...current, ...changes }));
@@ -622,6 +627,16 @@ function Workspace({
   }, [account]);
   const path = location.pathname;
   const selected = issues.find((issue) => issuePath(issue.id) === path);
+  useEffect(() => {
+    const remember = () => rememberWorkspacePage(account);
+    remember();
+    document.addEventListener("visibilitychange", remember);
+    window.addEventListener("pageshow", remember);
+    return () => {
+      document.removeEventListener("visibilitychange", remember);
+      window.removeEventListener("pageshow", remember);
+    };
+  }, [account, path]);
   const workspace = (
     <div className="workspace">
       <aside>
@@ -727,13 +742,12 @@ if (import.meta.env.PROD && "serviceWorker" in navigator) {
 
 const account = activeAccount();
 if (account && location.pathname === "/") {
-  const url = new URL(location.href);
-  url.pathname = "/app";
-  history.replaceState(history.state, "", url);
+  const page = location.search
+    ? "/app" + location.search
+    : lastWorkspacePage(account);
+  history.replaceState(history.state, "", page + location.hash);
 }
 watchSession(account);
-
-const newIssuePath = "/app/issues/new";
 
 function App() {
   const [composing, setComposing] = useState(

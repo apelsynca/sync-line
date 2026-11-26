@@ -50,7 +50,7 @@ bun run --cwd web build
 bun run --cwd web vite preview
 ```
 
-Open the preview URL on localhost or serve the app over HTTPS. Sign in, create ENG-1, and bookmark it. Disconnect, edit the issue, close the browser, and reopen the bookmark. Create ENG-2 offline, then reconnect and sign in with the same email in a second browser profile to check the numbers and edits.
+Open the preview URL on localhost or serve the app over HTTPS. Once signed in, opening `/` returns you to the last issue or list view you visited in this browser, even offline. Sign in, create ENG-1, and bookmark it. Disconnect, edit the issue, close the browser, and reopen the bookmark. Create ENG-2 offline, then reconnect and sign in with the same email in a second browser profile to check the numbers and edits.
 
 Signing out with pending changes keeps them on this device for the same account. If your session expires, continue editing and use **Sign in to sync** when connected. If the browser cannot save a draft, **Retry save** and **Copy draft** keep it available in the open editor.
 

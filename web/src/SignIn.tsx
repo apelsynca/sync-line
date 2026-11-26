@@ -10,7 +10,12 @@ export function SignIn({ expectedWorkspace }: { expectedWorkspace?: string }) {
       <Brand />
       <SignInForm
         expectedWorkspace={expectedWorkspace}
-        onSignedIn={() => location.replace(location.pathname)}
+        onSignedIn={() => {
+          const url = new URL(location.href);
+          url.searchParams.delete("signin");
+          if (url.pathname === "/app" && !url.search) url.pathname = "/";
+          location.replace(url);
+        }}
       />
     </main>
   );
