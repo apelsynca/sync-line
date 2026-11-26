@@ -31,6 +31,7 @@ import seeds from "../shared/demo-v1.json";
 import { SignIn, SignInForm } from "./SignIn";
 import { emptyFields } from "./versions";
 import { FieldReview } from "./FieldReview";
+import { Teammates } from "./Teammates";
 import { SignOutButton } from "./SignOutButton";
 import { RequestError } from "./api";
 import { activeAccount, watchSession } from "./session";
@@ -513,6 +514,7 @@ function Workspace({
             <ListTodo size={16} aria-hidden="true" /> Issues
           </a>
         </nav>
+        <Teammates workspace={account} />
         <SignOutButton
           account={account}
           writeFailed={writeFailed || composerWriteFailed}

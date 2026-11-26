@@ -25,7 +25,7 @@ DATABASE_URL=postgresql:///sync_line
 MAIL_TRANSPORT=logger
 ```
 
-With `logger`, request a sign-in code and read the eight digits next to your email address in the API terminal. Use this mode for local development. The other supported value, `smtp`, is a stub that accepts and discards messages. Restart the API after changing the setting.
+With `logger`, read sign-in codes and invitation messages in the API terminal. To deliver them by email, set `MAIL_TRANSPORT=smtp`, `SMTP_URL` to your relay URL, and `MAIL_FROM` to its sender address. For example, a local mailbox can use `smtp://127.0.0.1:1025`. A hosted relay can use `smtps://user:password@mail.example.com:465`. The defaults for SMTP are `smtp://localhost:25` and `sync-line@localhost`. Restart the API after changing these settings.
 
 In separate terminals, start the API and the Vite development server.
 
@@ -40,6 +40,8 @@ bun run client
 Open the localhost URL Vite prints and choose **Open your workspace**. Codes expire after ten minutes. The API applies migrations and listens on `127.0.0.1:3000`. To change its address, set `BIND_ADDR` in the API environment and launch Vite with the corresponding `API_PROXY_TARGET`.
 
 If this browser still has its old demo cookie, signing in brings your created issues and edited samples into your personal workspace once. They keep their available issue numbers, and fictional assignees become **Unassigned**.
+
+Open **Teammates** in your workspace to invite someone by email or cancel a pending invitation. Invitations stay pending until the recipient accepts. Invitation acceptance and workspace switching are scheduled for Release 2, step 2.
 
 ## Check the offline workflow
 

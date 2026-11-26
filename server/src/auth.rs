@@ -1,4 +1,4 @@
-use crate::{ApiError, db_error};
+use crate::{ApiError, db_error, mail::MailTransport};
 use axum::{
     Extension, Json, Router,
     extract::State,
@@ -9,27 +9,10 @@ use axum::{
 use rand::{Rng, rngs::OsRng};
 use serde::{Deserialize, Serialize};
 use sqlx::PgPool;
-use std::io::{self, Write};
 use uuid::Uuid;
 
 const UNAUTHORIZED: ApiError = (StatusCode::UNAUTHORIZED, "Sign in to your workspace.");
 const INVALID_CODE: ApiError = (StatusCode::UNAUTHORIZED, "Invalid or expired code.");
-
-#[derive(Clone, Copy)]
-pub enum MailTransport {
-    Logger,
-    Smtp,
-}
-
-impl MailTransport {
-    fn deliver(self, email: &str, code: &str) -> io::Result<()> {
-        match self {
-            Self::Logger => writeln!(io::stdout().lock(), "Sign-in code for {email}: {code}"),
-            // Accept the message until SMTP delivery is implemented.
-            Self::Smtp => Ok(()),
-        }
-    }
-}
 
 pub fn routes(mail: MailTransport) -> Router<PgPool> {
     Router::new()
@@ -55,7 +38,7 @@ struct Account {
     id: Uuid,
 }
 
-fn normalize(email: &str) -> Result<String, ApiError> {
+pub fn normalize(email: &str) -> Result<String, ApiError> {
     let email = email.trim().to_ascii_lowercase();
     let valid = email.split_once('@').is_some_and(|(local, domain)| {
         !local.is_empty()
@@ -108,7 +91,7 @@ async fn request_code(
     let email = normalize(&input.email)?;
     let code = format!("{:08}", OsRng.gen_range(0..100_000_000u32));
     let nonce = issue_code(&pool, &email, &code).await?;
-    if let Err(error) = mail.deliver(&email, &code) {
+    if let Err(error) = mail.deliver(&email, "Sign-in code", &code).await {
         eprintln!("Could not deliver sign-in code: {error}");
         sqlx::query("DELETE FROM email_codes WHERE email=$1 AND nonce=$2")
             .bind(email)
@@ -239,23 +222,26 @@ async fn sign_out(
     Ok(response)
 }
 
-pub async fn authorize(
+pub async fn authorize_owner(
     pool: &PgPool,
     headers: &HeaderMap,
     workspace: Uuid,
-) -> Result<(), ApiError> {
+) -> Result<String, ApiError> {
     let token = cookie_uuid(headers, "sync_line_session").ok_or(UNAUTHORIZED)?;
-    let authorized: bool = sqlx::query_scalar("SELECT EXISTS (SELECT 1 FROM sessions WHERE digest=sha256(uuid_send($1)) AND workspace_id=$2 AND expires_at > now())")
-        .bind(token).bind(workspace).fetch_one(pool).await.map_err(db_error)?;
-    if authorized {
-        Ok(())
-    } else {
-        Err(UNAUTHORIZED)
-    }
+    sqlx::query_scalar(
+        "SELECT accounts.email FROM sessions JOIN accounts USING (workspace_id)
+        WHERE digest=sha256(uuid_send($1)) AND workspace_id=$2 AND expires_at > now()",
+    )
+    .bind(token)
+    .bind(workspace)
+    .fetch_optional(pool)
+    .await
+    .map_err(db_error)?
+    .ok_or(UNAUTHORIZED)
 }
 
 #[cfg(test)]
-mod tests {
+pub(crate) mod tests {
     use super::*;
     use crate::{Fields, save};
     use axum::{body::to_bytes, extract::Path};
@@ -274,7 +260,7 @@ mod tests {
         .await
     }
 
-    async fn sign_in(pool: &PgPool, email: &str) -> (Uuid, HeaderMap) {
+    pub(crate) async fn sign_in(pool: &PgPool, email: &str) -> (Uuid, HeaderMap) {
         issue_code(pool, email, "03124567").await.unwrap();
         let response = redeem(pool, email, "03124567").await.unwrap();
         let mut headers = HeaderMap::new();
@@ -435,8 +421,11 @@ mod tests {
                     .contains("Max-Age=0")
             );
         }
-        assert_eq!(authorize(&pool, &first, account).await, Err(UNAUTHORIZED));
-        authorize(&pool, &second, account).await.unwrap();
+        assert_eq!(
+            authorize_owner(&pool, &first, account).await,
+            Err(UNAUTHORIZED)
+        );
+        authorize_owner(&pool, &second, account).await.unwrap();
     }
 
     fn issue(title: &str) -> Json<Fields> {
@@ -513,7 +502,7 @@ mod tests {
             UNAUTHORIZED
         );
         assert_eq!(
-            authorize(&pool, &other, account).await.unwrap_err(),
+            authorize_owner(&pool, &other, account).await.unwrap_err(),
             UNAUTHORIZED
         );
     }

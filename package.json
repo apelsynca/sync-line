@@ -1,5 +1,6 @@
 {
   "private": true,
+  "version": "0.2.0",
   "scripts": {
     "client": "bun run --bun --cwd web dev",
     "server": "cd server && cargo run",

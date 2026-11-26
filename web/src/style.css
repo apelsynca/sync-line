@@ -419,3 +419,31 @@ a.row:hover {
   display: flex;
   justify-content: space-between;
 }
+.teammates ul {
+  list-style: none;
+  margin: 1rem 0 0;
+  padding: 0;
+}
+.teammates li {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem;
+  padding: 0.6rem 0;
+  border-top: 1px solid var(--line);
+}
+.teammates li span {
+  overflow-wrap: anywhere;
+}
+.teammates small {
+  display: block;
+  color: var(--muted);
+}
+.teammates li button {
+  flex-shrink: 0;
+}
+@media (max-width: 680px) {
+  .workspace aside {
+    flex-wrap: wrap;
+  }
+}
