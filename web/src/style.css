@@ -392,6 +392,18 @@ nav p {
   background: var(--accent);
   color: var(--canvas);
 }
+.list-filters .property {
+  max-width: 100%;
+}
+.list-filters .property > span:first-of-type {
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+}
+.list-filters .property-menu {
+  max-width: var(--radix-select-content-available-width);
+  overflow-wrap: anywhere;
+}
 .issue-board {
   display: grid;
   grid-auto-flow: column;

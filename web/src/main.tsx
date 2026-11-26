@@ -32,7 +32,7 @@ import { RequestError } from "./api";
 import { CommandMenu } from "./CommandMenu";
 import { FieldReview } from "./FieldReview";
 import { IssueGroups } from "./IssueGroups";
-import { labelsMaxLength } from "./IssueLabels";
+import { IssueLabelFilter, labelsMaxLength, matchesLabel } from "./IssueLabels";
 import {
 	type IssueView,
 	issueStatuses,
@@ -96,6 +96,7 @@ function IssueList({
     statusFilter,
     priorityFilter,
     assigneeFilter = anyAssignee,
+    labelFilter,
   } = filters;
   const assignee = view === "mine" ? "Me" : assigneeFilter;
 	useEffect(() => {
@@ -116,7 +117,8 @@ function IssueList({
 		Boolean(term) ||
 		statusFilter !== anyStatus ||
     priorityFilter !== anyPriority ||
-    assigneeFilter !== anyAssignee;
+    assigneeFilter !== anyAssignee ||
+    labelFilter !== undefined;
 	const hideEmptyGroups = filtered || view === "mine" || view === "backlog";
 	const statuses = issueViews[view].statuses.filter(
 		(status) => !preview || status !== "Backlog",
@@ -130,6 +132,7 @@ function IssueList({
       (assignee === anyAssignee || issue.assignee === assignee) &&
 			(statusFilter === anyStatus || issue.status === statusFilter) &&
 			(priorityFilter === anyPriority || issue.priority === priorityFilter) &&
+			matchesLabel(issue.labels, labelFilter) &&
 			(!term ||
 				`eng-${issue.number}`.includes(term) ||
 				issue.title.toLowerCase().includes(term) ||
@@ -203,6 +206,11 @@ function IssueList({
                 onChange={(assigneeFilter) => updateFilters({ assigneeFilter })}
               />
             )}
+						<IssueLabelFilter
+							issues={issues}
+							value={labelFilter}
+							onChange={(labelFilter) => updateFilters({ labelFilter })}
+						/>
 						{account && (
 							<SavedViews
 								account={account}

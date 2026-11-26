@@ -10,6 +10,7 @@ export function PropertySelect({
   value,
   options,
   onChange,
+  formatValue = (option) => option || unassigned,
   icon,
   iconOnly = false,
 }: {
@@ -18,6 +19,7 @@ export function PropertySelect({
   value: string;
   options: readonly string[];
   onChange: (value: string) => void;
+  formatValue?: (value: string) => string;
   icon?: (value: string) => ReactNode;
   iconOnly?: boolean;
 }) {
@@ -36,7 +38,7 @@ export function PropertySelect({
         {icon?.(value)}
         {!iconOnly && (
           <>
-            <Select.Value>{value || unassigned}</Select.Value>
+            <Select.Value>{formatValue(value)}</Select.Value>
             <Select.Icon asChild>
               <ChevronDown size={12} />
             </Select.Icon>
@@ -58,7 +60,7 @@ export function PropertySelect({
               value={option || unassigned}
             >
               {icon?.(option)}
-              <Select.ItemText>{option || unassigned}</Select.ItemText>
+              <Select.ItemText>{formatValue(option)}</Select.ItemText>
               <Select.ItemIndicator className="property-check">
                 <Check size={14} />
               </Select.ItemIndicator>
