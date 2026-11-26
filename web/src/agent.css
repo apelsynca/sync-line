@@ -1,7 +1,7 @@
 .workspace .agent-main {
   display: flex;
   flex-direction: column;
-  background: #121212;
+  background: var(--canvas);
   overflow: hidden;
 }
 .agent-panel {
@@ -81,7 +81,7 @@
   box-shadow: 0 2px 4px #0004;
 }
 .agent-composer:focus-within {
-  border-color: #49494d;
+  border-color: var(--accent);
 }
 .agent-composer textarea {
   display: block;
@@ -139,7 +139,7 @@
 .agent-git {
   display: flex;
   margin: 0.8rem auto 0;
-  border: 1px solid #ffffff10;
+  border: 1px solid var(--line);
   background: var(--panel);
   color: var(--ink);
   font-weight: 500;
@@ -160,7 +160,7 @@
   align-items: flex-start;
   gap: 0.35rem;
   padding: 1.15rem;
-  border: 1px solid #ffffff13;
+  border: 1px solid var(--line);
   border-radius: 0.6rem;
   background: transparent;
   color: var(--ink);
@@ -195,7 +195,7 @@
 }
 .agent-time {
   grid-area: 1 / 2;
-  color: #99999e;
+  color: var(--muted);
   font-size: 0.82rem;
 }
 .workspace:has(.agent-panel.chatting) {
@@ -238,7 +238,7 @@
   margin-left: auto;
   padding: 0.65rem 0.9rem;
   border-radius: 0.7rem;
-  background: #242426;
+  background: var(--control);
 }
 .agent-history .assistant {
   padding-inline: 0.75rem;
@@ -273,7 +273,7 @@
   margin-inline: var(--chat-inset);
   flex: none;
   padding: 0.85rem;
-  background: #1e1e1f;
+  background: var(--panel);
 }
 .chatting textarea {
   height: clamp(2.5rem, 7dvh, 5.5rem);

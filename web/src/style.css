@@ -266,8 +266,9 @@ aside .session-action {
   border-radius: 5px;
   color: var(--ink);
 }
-.editor :is(input, textarea)::placeholder {
-  color: #818186;
+::placeholder {
+  color: var(--muted);
+  opacity: 1;
 }
 .issue-title {
   font-size: 1.2rem;
@@ -719,4 +720,15 @@ aside .session-action {
 }
 .command-menu [role="option"]:is(:hover, [aria-selected="true"]) {
   background: var(--control);
+}
+
+.choose-dark,
+[data-appearance="light"] .choose-light {
+  display: none;
+}
+[data-appearance="light"] .choose-dark {
+  display: inline;
+}
+.command-menu [role="option"][aria-selected="true"] {
+  box-shadow: inset 3px 0 var(--accent);
 }

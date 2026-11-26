@@ -19,6 +19,7 @@ import {
 	Minimize2,
 	MousePointer2,
 	Plus,
+	Sun,
 	SignalHigh,
 	SignalLow,
 	SignalMedium,
@@ -31,6 +32,7 @@ import { type FormEvent, Fragment, useEffect, useRef, useState } from "react";
 import { createRoot } from "react-dom/client";
 import seeds from "../shared/demo-v1.json";
 import { RequestError } from "./api";
+import { applyAppearance, changeAppearance } from "./appearance";
 import { Agent } from "./Agent";
 import { CommandMenu } from "./CommandMenu";
 import { FieldReview } from "./FieldReview";
@@ -720,6 +722,11 @@ function Workspace({
 						canNavigate={!writeFailed}
 					/>
 				</nav>
+				<button type="button" className="session-action" onClick={changeAppearance}>
+					<Sun size={16} aria-hidden="true" />
+					<span className="choose-light">Use light theme</span>
+					<span className="choose-dark">Use dark theme</span>
+				</button>
 				<McpAccess account={account} />
 				<SignOutButton
 					account={account}
@@ -810,6 +817,7 @@ if (import.meta.env.PROD && "serviceWorker" in navigator) {
 	void navigator.serviceWorker.register("/sw.js").catch(() => {});
 }
 
+applyAppearance();
 const account = activeAccount();
 if (account && location.pathname === "/") {
 	const page = location.search

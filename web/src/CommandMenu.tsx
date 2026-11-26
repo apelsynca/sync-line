@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from "react";
 import { Command, X } from "lucide-react";
 import { Modal } from "@sync-line/ui";
+import { changeAppearance, readAppearance } from "./appearance";
 import { issuePath, type Issue } from "./workspace";
 import { viewPath } from "./issueViews";
 
@@ -59,6 +60,7 @@ export function CommandMenu({
   }
   if (open) {
     add("new", "New issue", onCreate);
+    add("appearance", readAppearance() === "dark" ? "Use light theme" : "Use dark theme", changeAppearance);
     if (canNavigate && issues.length) {
       const go = (label: string, path: string) =>
         add(path, label, () => location.assign(path));
@@ -89,7 +91,7 @@ export function CommandMenu({
   function run(i: number) {
     const command = matches[i];
     if (!command) return;
-    returnFocus.current = null;
+    if (command.id !== "appearance") returnFocus.current = null;
     setOpen(false);
     command.run();
   }
