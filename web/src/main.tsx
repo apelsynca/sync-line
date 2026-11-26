@@ -66,13 +66,15 @@ import {
 	saveIssue,
 	sync,
 } from "./workspace";
+import { ProjectMenu } from "./ProjectMenu";
+import { defaultProject, readProjects, selectedProjectKey, type Project } from "./projects";
 import "./style.css";
 
-function Team() {
+function Team({ name }: { name: string }) {
 	return (
 		<span className="team">
 			<Layers aria-hidden="true" size={16} />
-			Engineering
+			{name}
 		</span>
 	);
 }
@@ -82,10 +84,12 @@ const anyPriority = "Any priority";
 const anyAssignee = "Any assignee";
 
 function IssueList({
+	projectName = defaultProject.name,
 	account,
 	issues,
 	onCreate,
 }: {
+	projectName?: string;
 	account?: string;
 	issues: Issue[];
 	onCreate?: () => void;
@@ -154,7 +158,7 @@ function IssueList({
 			aria-label={preview ? "Demo workspace preview" : "Workspace issues"}
 		>
 			<div className="list-head">
-				<Team />
+				<Team name={projectName} />
 				<ChevronRight size={14} aria-hidden="true" />
 				<h2>Issues</h2>
 				{onCreate && (
@@ -316,12 +320,14 @@ const propertyIcons = {
 };
 
 function Editor({
+	project,
 	account,
 	issue,
 	writeFailed,
 	setWriteFailed,
 	onDismiss,
 }: {
+	project: Project;
 	account: string;
 	writeFailed: boolean;
 	setWriteFailed: (failed: boolean) => void;
@@ -329,7 +335,7 @@ function Editor({
 	| { issue: Issue; onDismiss?: never }
 	| { issue?: never; onDismiss: () => void }
 )) {
-	const draftKey = composerKey(account);
+	const draftKey = composerKey(account, project.id);
 	const initialFields =
 		location.pathname === "/app" &&
 		viewFromSearch(location.search) === "backlog"
@@ -411,7 +417,7 @@ function Editor({
 			await createIssue(account, requestId, {
 				...draft,
 				title: draft.title.trim(),
-			});
+			}, project.id);
 			localStorage.removeItem(draftKey);
 			setWriteFailed(false);
 			if (createMore) {
@@ -433,7 +439,7 @@ function Editor({
 			<fieldset disabled={creating}>
 				<div className="editor-head">
 					<span className="team-chip">
-						<Layers size={14} aria-hidden="true" /> ENG
+						<Layers size={14} aria-hidden="true" /> {project.name}
 					</span>
 					<ChevronRight size={14} aria-hidden="true" />
 					<h1 id={issue ? undefined : "editor-title"}>
@@ -633,6 +639,8 @@ function Workspace({
 	openComposer: () => void;
 	closeComposer: () => void;
 }) {
+	const [projects, setProjects] = useState(() => readProjects(account));
+	const [preferred, setPreferred] = useState(() => localStorage.getItem(selectedProjectKey(account)));
 	const [issues, setIssues] = useState(() => readIssues(account));
 	const [expired, setExpired] = useState(false);
 	const [writeFailed, setWriteFailed] = useState(false);
@@ -643,7 +651,10 @@ function Workspace({
 		let queued = false;
 		let closed = false;
 		let timer: number;
-		const refresh = () => setIssues(readIssues(account));
+		const refresh = () => {
+			setIssues(readIssues(account));
+			setProjects(readProjects(account));
+		};
 		async function synchronize() {
 			if (running) {
 				queued = true;
@@ -695,6 +706,18 @@ function Workspace({
 	}, [account]);
 	const path = location.pathname;
 	const selected = issues.find((issue) => issuePath(issue.id) === path);
+	const projectId = selected ? selected.project_id ?? defaultProject.id : preferred ?? defaultProject.id;
+	const active = projects.find(project => project.id === projectId) ?? { id: projectId, name: "Project" };
+	const members = issues.filter(issue => (issue.project_id ?? defaultProject.id) === projectId);
+	useEffect(() => {
+		if (selected) localStorage.setItem(selectedProjectKey(account), projectId);
+	}, [account, selected, projectId]);
+	function selectProject(id: string) {
+		localStorage.setItem(selectedProjectKey(account), id);
+		setPreferred(id);
+		if (path !== "/app") location.assign("/app");
+	}
+
 	useEffect(() => {
 		const remember = () => rememberWorkspacePage(account);
 		remember();
@@ -711,7 +734,7 @@ function Workspace({
 				<Brand href="/app" />
 				<nav aria-label="Your workspace">
 					<p>Your workspace</p>
-					<Team />
+					<ProjectMenu account={account} projects={projects} active={active} select={selectProject} />
 					<a href="/app" className="nav-issues" aria-current={path !== agentPath ? "location" : undefined}>
 						<ListTodo size={16} aria-hidden="true" /> Issues
 					</a>
@@ -719,7 +742,7 @@ function Workspace({
 						<MousePointer2 size={16} aria-hidden="true" /> Agent
 					</a>
 					<CommandMenu
-						issues={issues}
+						issues={members}
 						onCreate={openComposer}
 						canNavigate={!writeFailed}
 					/>
@@ -765,10 +788,11 @@ function Workspace({
 				{path === agentPath ? (
 					<Agent account={account} issues={issues} />
 				) : path === "/app" || path === newIssuePath ? (
-					issues.length ? (
+					members.length ? (
 						<IssueList
+							projectName={active.name}
 							account={account}
-							issues={issues}
+							issues={members}
 							onCreate={openComposer}
 						/>
 					) : (
@@ -786,6 +810,7 @@ function Workspace({
 					)
 				) : selected ? (
 					<Editor
+						project={active}
 						writeFailed={writeFailed}
 						setWriteFailed={setWriteFailed}
 						account={account}
@@ -805,6 +830,8 @@ function Workspace({
 			{workspace}
 			{composing && (
 				<Editor
+					key={projectId}
+					project={active}
 					account={account}
 					writeFailed={composerWriteFailed}
 					setWriteFailed={setComposerWriteFailed}

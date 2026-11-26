@@ -39,6 +39,7 @@ test("edit an example, attach an issue, and follow its chat link at phone width"
   await page.route("**/api/workspaces/*/issues", (route) =>
     route.fulfill({ json: [issue] }),
   );
+  await page.route("**/api/workspaces/*/projects", route => route.fulfill({ json: [] }));
   const requests: {
     request_id: string;
     prompt: string;
