@@ -126,6 +126,7 @@ async fn request_code(
 
 async fn verify(
     State(pool): State<PgPool>,
+    headers: HeaderMap,
     Json(input): Json<Verification>,
 ) -> Result<Response, ApiError> {
     let email = normalize(&input.email)?;
@@ -179,6 +180,10 @@ async fn verify(
             id
         }
     };
+    let demo = cookie_uuid(&headers, "sync_line_demo");
+    if let Some(source) = demo {
+        crate::demo::import(&mut tx, source, id).await?;
+    }
     let token = Uuid::new_v4();
     sqlx::query("INSERT INTO sessions(digest,workspace_id,expires_at) VALUES(sha256(uuid_send($1)), $2, now() + interval '30 days')")
         .bind(token).bind(id).execute(&mut *tx).await.map_err(db_error)?;
@@ -186,17 +191,25 @@ async fn verify(
     let mut response = Json(Account { id }).into_response();
     response.headers_mut().insert(header::SET_COOKIE,
         format!("sync_line_session={token}; HttpOnly; Secure; SameSite=Strict; Path=/api; Max-Age=2592000").parse().unwrap());
+    if demo.is_some() {
+        response.headers_mut().append(
+            header::SET_COOKIE,
+            "sync_line_demo=; Path=/api; HttpOnly; SameSite=Lax; Max-Age=0"
+                .parse()
+                .unwrap(),
+        );
+    }
     Ok(response)
 }
 
-fn session_token(headers: &HeaderMap) -> Option<Uuid> {
+fn cookie_uuid(headers: &HeaderMap, name: &str) -> Option<Uuid> {
     headers
         .get(header::COOKIE)
         .and_then(|v| v.to_str().ok())
         .and_then(|cookies| {
             cookies.split(';').find_map(|cookie| {
-                let token = cookie.trim().strip_prefix("sync_line_session=")?;
-                Uuid::parse_str(token).ok()
+                let (key, value) = cookie.trim().split_once('=')?;
+                (key == name).then(|| Uuid::parse_str(value).ok()).flatten()
             })
         })
 }
@@ -209,7 +222,7 @@ async fn sign_out(
     headers: HeaderMap,
     _: Json<SignOut>,
 ) -> Result<Response, ApiError> {
-    if let Some(token) = session_token(&headers) {
+    if let Some(token) = cookie_uuid(&headers, "sync_line_session") {
         sqlx::query("DELETE FROM sessions WHERE digest=sha256(uuid_send($1))")
             .bind(token)
             .execute(&pool)
@@ -231,7 +244,7 @@ pub async fn authorize(
     headers: &HeaderMap,
     workspace: Uuid,
 ) -> Result<(), ApiError> {
-    let token = session_token(headers).ok_or(UNAUTHORIZED)?;
+    let token = cookie_uuid(headers, "sync_line_session").ok_or(UNAUTHORIZED)?;
     let authorized: bool = sqlx::query_scalar("SELECT EXISTS (SELECT 1 FROM sessions WHERE digest=sha256(uuid_send($1)) AND workspace_id=$2 AND expires_at > now())")
         .bind(token).bind(workspace).fetch_one(pool).await.map_err(db_error)?;
     if authorized {
@@ -251,6 +264,7 @@ mod tests {
     async fn redeem(pool: &PgPool, email: &str, code: &str) -> Result<Response, ApiError> {
         verify(
             State(pool.clone()),
+            HeaderMap::new(),
             Json(Verification {
                 email: email.into(),
                 code: code.into(),
@@ -314,6 +328,7 @@ mod tests {
         issue_code(&pool, other, "01234567").await.unwrap();
         let error = verify(
             State(pool),
+            HeaderMap::new(),
             Json(Verification {
                 email: other.into(),
                 code: "01234567".into(),
@@ -323,6 +338,85 @@ mod tests {
         .await
         .unwrap_err();
         assert_eq!(error.0, StatusCode::CONFLICT);
+    }
+
+    #[sqlx::test]
+    async fn sign_in_claims_demo_work_once_and_keeps_available_numbers(pool: PgPool) {
+        let owner = "demo@example.test";
+        let (workspace, _) = sign_in(&pool, owner).await;
+        let demo = Uuid::new_v4();
+        sqlx::query("INSERT INTO workspaces(id) VALUES ($1)")
+            .bind(demo)
+            .execute(&pool)
+            .await
+            .unwrap();
+        sqlx::query("INSERT INTO pending_demo_imports VALUES ($1)")
+            .bind(demo)
+            .execute(&pool)
+            .await
+            .unwrap();
+        sqlx::query("INSERT INTO issues(workspace_id, number, request_id, title, description, status, assignee, priority) VALUES
+            ($1, 1, gen_random_uuid(), 'Polish the onboarding checklist', 'Give new teammates a clear starting point on their first visit.', 'In progress', 'Mira Chen', 'High'),
+            ($1, 2, gen_random_uuid(), 'Add empty states to search', 'Show a helpful message when a search has no matches.', 'Todo', 'Ana Silva', 'Medium'),
+            ($1, 5, gen_random_uuid(), 'Created in demo', 'Offline notes', 'Done', 'Mira Chen', 'High'),
+            ($1, 6, gen_random_uuid(), 'Keep ENG-6', '', 'Todo', '', 'Low')")
+            .bind(demo).execute(&pool).await.unwrap();
+        for _ in 1..=5 {
+            crate::write_issue(
+                &pool,
+                workspace,
+                Uuid::new_v4(),
+                crate::Write::Legacy(issue("Cloud issue").0),
+            )
+            .await
+            .unwrap();
+        }
+
+        let verify_cookie = |email: &str, cookie_id| {
+            let mut headers = HeaderMap::new();
+            headers.insert(
+                header::COOKIE,
+                format!("sync_line_demo={cookie_id}").parse().unwrap(),
+            );
+            verify(
+                State(pool.clone()),
+                headers,
+                Json(Verification {
+                    email: email.into(),
+                    code: "03124567".into(),
+                    expected_workspace: None,
+                }),
+            )
+        };
+        for (email, cookie_id) in [
+            (owner, demo),
+            (owner, demo),
+            ("other@example.test", demo),
+            ("other@example.test", workspace),
+        ] {
+            issue_code(&pool, email, "03124567").await.unwrap();
+            verify_cookie(email, cookie_id).await.unwrap();
+        }
+        let imported = sqlx::query_as::<_, crate::Issue>(
+            "SELECT cloud.request_id AS id, cloud.* FROM issues cloud JOIN issues demo USING (request_id)
+             WHERE cloud.workspace_id=$1 AND demo.workspace_id=$2 ORDER BY demo.number")
+            .bind(workspace).bind(demo).fetch_all(&pool).await.unwrap();
+        let numbers: Vec<_> = imported.iter().map(|issue| issue.number).collect();
+        assert_eq!(numbers, [7, 8, 6]);
+        assert!(
+            imported
+                .iter()
+                .all(|issue| issue.fields.assignee.is_empty())
+        );
+        let created = &imported[1].fields;
+        assert_eq!(created.title, "Created in demo");
+        assert_eq!(created.description, "Offline notes");
+        assert_eq!(created.status, "Done");
+        assert_eq!(created.priority, "High");
+        let other_count: i64 = sqlx::query_scalar(
+            "SELECT count(*) FROM issues JOIN accounts USING(workspace_id) WHERE email='other@example.test'")
+            .fetch_one(&pool).await.unwrap();
+        assert_eq!(other_count, 0);
     }
 
     #[sqlx::test]

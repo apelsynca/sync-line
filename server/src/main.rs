@@ -1,4 +1,5 @@
 mod auth;
+mod demo;
 mod merge;
 
 use merge::{Changes, FIELDS, Versions};
@@ -10,13 +11,13 @@ use axum::{
     routing::{get, put},
 };
 use serde::{Deserialize, Serialize};
-use sqlx::{PgPool, types::Json as DbJson};
+use sqlx::{PgPool, Postgres, Transaction, types::Json as DbJson};
 use std::time::{SystemTime, UNIX_EPOCH};
 use uuid::Uuid;
 
 type ApiError = (StatusCode, &'static str);
 
-#[derive(Default, Deserialize, Serialize, sqlx::FromRow)]
+#[derive(Default, Deserialize, PartialEq, Serialize, sqlx::FromRow)]
 struct Fields {
     title: String,
     description: String,
@@ -79,6 +80,7 @@ struct Patch {
 enum Write {
     Patch(Patch),
     Legacy(Fields),
+    Import { number: i32, fields: Fields },
 }
 
 async fn write_issue(
@@ -88,20 +90,48 @@ async fn write_issue(
     write: Write,
 ) -> Result<Issue, ApiError> {
     let mut tx = pool.begin().await.map_err(db_error)?;
-    // Both ID retries and number collisions must observe the last committed workspace state.
-    let next: i32 = sqlx::query_scalar("SELECT next_number FROM workspaces WHERE id=$1 FOR UPDATE")
+    let issue = write_issue_in(&mut tx, workspace, id, write).await?;
+    tx.commit().await.map_err(db_error)?;
+    Ok(issue)
+}
+
+async fn lock_workspace(
+    tx: &mut Transaction<'_, Postgres>,
+    workspace: Uuid,
+) -> Result<i32, ApiError> {
+    // Serialize ID retries and number assignment against the committed workspace state.
+    sqlx::query_scalar("SELECT next_number FROM workspaces WHERE id=$1 FOR UPDATE")
         .bind(workspace)
-        .fetch_one(&mut *tx)
+        .fetch_one(&mut **tx)
         .await
-        .map_err(db_error)?;
+        .map_err(db_error)
+}
+
+async fn write_issue_in(
+    tx: &mut Transaction<'_, Postgres>,
+    workspace: Uuid,
+    id: Uuid,
+    write: Write,
+) -> Result<Issue, ApiError> {
+    let next = lock_workspace(tx, workspace).await?;
     let current = sqlx::query_as::<_, Issue>(
         "SELECT request_id AS id, * FROM issues WHERE workspace_id=$1 AND request_id=$2",
     )
     .bind(workspace)
     .bind(id)
-    .fetch_optional(&mut *tx)
+    .fetch_optional(&mut **tx)
     .await
     .map_err(db_error)?;
+    if matches!(write, Write::Import { .. })
+        && let Some(existing) = current
+    {
+        return Ok(existing);
+    }
+    let preferred = match &write {
+        Write::Patch(patch) => patch.number,
+        Write::Import { number, .. } => *number,
+        Write::Legacy(_) => next,
+    };
     let creating = current.is_none();
     let mut issue = current.unwrap_or_else(|| Issue {
         id,
@@ -109,6 +139,19 @@ async fn write_issue(
         fields: Fields::default(),
         versions: Versions::new(),
     });
+    if creating && preferred != next {
+        let taken: bool = sqlx::query_scalar(
+            "SELECT EXISTS(SELECT 1 FROM issues WHERE workspace_id=$1 AND number=$2)",
+        )
+        .bind(workspace)
+        .bind(preferred)
+        .fetch_one(&mut **tx)
+        .await
+        .map_err(db_error)?;
+        if !taken {
+            issue.number = preferred;
+        }
+    }
     let changes = match write {
         Write::Patch(patch) => {
             if patch.number <= 0
@@ -117,22 +160,9 @@ async fn write_issue(
             {
                 return Err((StatusCode::BAD_REQUEST, "Missing issue fields or number."));
             }
-            if creating && patch.number != next {
-                let taken: bool = sqlx::query_scalar(
-                    "SELECT EXISTS(SELECT 1 FROM issues WHERE workspace_id=$1 AND number=$2)",
-                )
-                .bind(workspace)
-                .bind(patch.number)
-                .fetch_one(&mut *tx)
-                .await
-                .map_err(db_error)?;
-                if !taken {
-                    issue.number = patch.number;
-                }
-            }
             patch.changes
         }
-        Write::Legacy(mut fields) => {
+        Write::Legacy(mut fields) | Write::Import { mut fields, .. } => {
             let mut changes = Changes::new();
             for key in FIELDS {
                 let value = fields.value_mut(key);
@@ -163,14 +193,13 @@ async fn write_issue(
         title=excluded.title, description=excluded.description, status=excluded.status,
         priority=excluded.priority, assignee=excluded.assignee, versions=excluded.versions")
         .bind(workspace).bind(id).bind(issue.number).bind(&f.title).bind(&f.description).bind(&f.status)
-        .bind(&f.priority).bind(&f.assignee).bind(DbJson(&issue.versions)).execute(&mut *tx).await.map_err(db_error)?;
+        .bind(&f.priority).bind(&f.assignee).bind(DbJson(&issue.versions)).execute(&mut **tx).await.map_err(db_error)?;
     if creating && issue.number == next {
         sqlx::query("UPDATE workspaces SET next_number=(
             SELECT min(i.number::bigint+1) FROM issues i WHERE i.workspace_id=$1 AND i.number >= $2
             AND NOT EXISTS (SELECT 1 FROM issues used WHERE used.workspace_id=$1 AND used.number=i.number::bigint+1)
-        ) WHERE id=$1").bind(workspace).bind(next).execute(&mut *tx).await.map_err(db_error)?;
+        ) WHERE id=$1").bind(workspace).bind(next).execute(&mut **tx).await.map_err(db_error)?;
     }
-    tx.commit().await.map_err(db_error)?;
     Ok(issue)
 }
 

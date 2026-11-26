@@ -39,6 +39,8 @@ bun run client
 
 Open the localhost URL Vite prints and choose **Open your workspace**. Codes expire after ten minutes. The API applies migrations and listens on `127.0.0.1:3000`. To change its address, set `BIND_ADDR` in the API environment and launch Vite with the corresponding `API_PROXY_TARGET`.
 
+If this browser still has its old demo cookie, signing in brings your created issues and edited samples into your personal workspace once. They keep their available issue numbers, and fictional assignees become **Unassigned**.
+
 ## Check the offline workflow
 
 Keep the API running. Build and serve the production client so the service worker can cache the app for offline navigation.
@@ -54,4 +56,4 @@ Signing out with pending changes keeps them on this device for the same account.
 
 If two devices create the same issue number offline, the first synced issue keeps it. Both bookmarks still work. Edits to different fields merge automatically. When the same field has competing values, **Review previous edit** lets you restore an older value or save a combined edit. Other issues continue syncing while a review is open.
 
-Run `cargo test` from `server/` with `DATABASE_URL` set to exercise sign-in code expiry and reuse, account isolation, session revocation, concurrent upload retries, number collisions, and field-level conflict resolution. SQLx creates temporary databases, so the test role needs permission to create databases.
+Run `cargo test` from `server/` with `DATABASE_URL` set to exercise sign-in code expiry and reuse, account isolation, session revocation, concurrent upload retries, demo imports, number collisions, and field-level conflict resolution. SQLx creates temporary databases, so the test role needs permission to create databases.

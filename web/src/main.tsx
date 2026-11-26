@@ -27,7 +27,7 @@ import {
   Status,
   StatusIcon,
 } from "@sync-line/ui";
-import seeds from "../shared/issues.json";
+import seeds from "../shared/demo-v1.json";
 import { SignIn, SignInForm } from "./SignIn";
 import { emptyFields } from "./versions";
 import { FieldReview } from "./FieldReview";

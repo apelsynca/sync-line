@@ -1,4 +1,4 @@
-import type seeds from "../shared/issues.json";
+import type seeds from "../shared/demo-v1.json";
 
 export type Fields = (typeof seeds)[number];
 export const emptyFields: Fields = {
